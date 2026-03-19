@@ -1,138 +1,216 @@
-/* grid cells */
-div[role=gridcell] {
-    border-top-color: transparent !important;
-    border-left-color: transparent !important;
+/* AG Grid - VS Code theme integration */
+.ag-theme-alpine {
+    --ag-background-color: var(--vscode-editor-background);
+    --ag-foreground-color: var(--vscode-editor-foreground);
+    --ag-header-background-color: var(--vscode-titleBar-activeBackground);
+    --ag-header-foreground-color: var(--vscode-titleBar-activeForeground);
+    --ag-odd-row-background-color: var(--vscode-sideBar-background);
+    --ag-row-hover-color: var(--vscode-list-hoverBackground);
+    --ag-selected-row-background-color: var(--vscode-list-activeSelectionBackground);
+    --ag-border-color: var(--vscode-tree-indentGuidesStroke);
+    --ag-cell-horizontal-border: solid var(--vscode-tree-indentGuidesStroke);
+    --ag-row-border-color: var(--vscode-tree-indentGuidesStroke);
+    --ag-header-column-separator-color: var(--vscode-tree-indentGuidesStroke);
+    --ag-input-focus-border-color: var(--vscode-focusBorder);
+    --ag-range-selection-border-color: var(--vscode-editor-selectionBackground);
+    --ag-input-border-color: var(--vscode-input-border);
+    --ag-input-background-color: var(--vscode-input-background);
+    --ag-font-family: var(--vscode-font-family, inherit);
+    --ag-font-size: var(--vscode-font-size, 13px);
+    --ag-grid-size: 4px;
+    --ag-list-item-height: 24px;
 }
-.wj-content {
-    background-color: var(--vscode-editor-background);
-    color: var(--vscode-editor-foreground);
-    border-radius: 0px;
-    border-color: var(--vscode-tree-indentGuidesStroke);
+
+/* Force theme colors — AG Grid Alpine hardcodes some values that need !important to override */
+.ag-theme-alpine .ag-root-wrapper,
+.ag-theme-alpine .ag-root,
+.ag-theme-alpine .ag-body-viewport,
+.ag-theme-alpine .ag-center-cols-viewport,
+.ag-theme-alpine .ag-center-cols-container,
+.ag-theme-alpine .ag-pinned-left-cols-container,
+.ag-theme-alpine .ag-pinned-right-cols-container,
+.ag-theme-alpine .ag-full-width-container {
+    background-color: var(--vscode-editor-background) !important;
 }
-.wj-flexgrid:focus-within {
-    border-color: var(--vscode-focusBorder);
+
+.ag-theme-alpine .ag-cell {
+    color: var(--vscode-editor-foreground) !important;
+    border-right-color: var(--vscode-tree-indentGuidesStroke) !important;
 }
-.wj-cell {
-    border-right-color: var(--vscode-tree-indentGuidesStroke);
+
+.ag-theme-alpine .ag-row {
     border-bottom-color: var(--vscode-tree-indentGuidesStroke);
+    z-index: 3 !important;
 }
 
-/* header cells */
-.wj-cell.wj-header {
-    background-color: var(--vscode-titleBar-activeBackground) !important;
-    color: var(--vscode-titleBar-activeForeground) !important;
-}
-.wj-cell.wj-header .wj-state-multi-selected {
-    background-color: var(--vscode-list-inactiveSelectionBackground) !important;
-    color: var(--vscode-list-inactiveSelectionForeground) !important;
-}
-
-/* selection states */
-.wj-state-selected {
+.ag-theme-alpine .ag-row-selected .ag-cell {
     background-color: var(--vscode-list-activeSelectionBackground) !important;
     color: var(--vscode-list-activeSelectionForeground) !important;
 }
-.wj-state-multi-selected {
-    background-color: var(--vscode-list-inactiveSelectionBackground) !important;
-    color: var(--vscode-list-inactiveSelectionForeground) !important;
-}
-.wj-cell.wj-state-active {
-    background-color: var(--vscode-list-activeSelectionBackground) !important;
-    color: var(--vscode-list-activeSelectionForeground) !important;
-}
-.wj-flexsheet .wj-cell.wj-state-active {
-    background-color: var(--vscode-list-activeSelectionBackground) !important;
-    color: var(--vscode-list-activeSelectionForeground) !important;
-}
-.wj-flexsheet .wj-cell.wj-state-multi-selected {
-    background-color: var(--vscode-list-inactiveSelectionBackground) !important;
-    color: var(--vscode-list-inactiveSelectionForeground) !important;
-    border-right-color: var(--vscode-tree-indentGuidesStroke) !important;
-    border-bottom-color: var(--vscode-tree-indentGuidesStroke) !important;
-}
-.wj-flexsheet .wj-cell.wj-header .wj-state-multi-selected {
-    background-color: var(--vscode-list-inactiveSelectionBackground) !important;
-    color: var(--vscode-list-inactiveSelectionForeground) !important;
+
+.ag-theme-alpine .ag-row-odd {
+    background-color: var(--vscode-sideBar-background) !important;
+    color: var(--vscode-sideBar-foreground, var(--vscode-editor-foreground)) !important;
 }
 
-/* row and column headers */
-.wj-flexgrid .wj-rowheaders .wj-header.wj-state-multi-selected {
-    border-right-color: var(--vscode-list-activeSelectionBackground) !important;
-    border-bottom-color: var(--vscode-tree-indentGuidesStroke) !important;
-}
-.wj-flexgrid .wj-colheaders .wj-header.wj-state-multi-selected {
-    border-bottom-color: var(--vscode-list-activeSelectionBackground) !important;
-    border-right-color: var(--vscode-tree-indentGuidesStroke) !important;
-}
-
-/* marquee */
-.wj-flexgrid .wj-marquee {
-    box-shadow: none;
-}
-
-/* alternating rows */
-.wj-cell:not(.wj-header):not(.wj-group):not(.wj-alt):not(.wj-state-selected):not(.wj-state-multi-selected) {
+.ag-theme-alpine .ag-row-even {
     background-color: var(--vscode-editor-background) !important;
     color: var(--vscode-editor-foreground) !important;
 }
-.wj-alt:not(.wj-header):not(.wj-group):not(.wj-state-selected):not(.wj-state-multi-selected) {
-    background-color: var(--vscode-sideBar-background) !important;
-    color: var(--vscode-sideBar-foreground) !important;
+
+.ag-theme-alpine .ag-row:hover {
+    background-color: var(--vscode-list-hoverBackground) !important;
 }
 
-/* dropdowns and buttons */
-.wj-columnfiltereditor .wj-control {
-    background-color: var(--vscode-input-background);
-    color: var(--vscode-input-foreground);
+.ag-theme-alpine .ag-header,
+.ag-theme-alpine .ag-header-row,
+.ag-theme-alpine .ag-header-cell,
+.ag-theme-alpine .ag-header-group-cell {
+    background-color: var(--vscode-titleBar-activeBackground) !important;
+    color: var(--vscode-titleBar-activeForeground) !important;
+    border-right-color: var(--vscode-tree-indentGuidesStroke) !important;
 }
-.wj-columnfiltereditor .wj-btn {
+
+.ag-theme-alpine .ag-header {
+    border-bottom-color: var(--vscode-tree-indentGuidesStroke) !important;
+}
+
+.ag-theme-alpine .ag-cell-focus {
+    border-color: var(--vscode-focusBorder) !important;
+}
+
+/* Filter popup & menu */
+.ag-theme-alpine .ag-filter-toolpanel-header,
+.ag-theme-alpine .ag-filter-toolpanel-search,
+.ag-theme-alpine .ag-status-bar,
+.ag-theme-alpine .ag-floating-filter,
+.ag-theme-alpine .ag-menu,
+.ag-theme-alpine .ag-popup,
+.ag-theme-alpine .ag-popup-child,
+.ag-theme-alpine .ag-filter,
+.ag-theme-alpine .ag-filter-body-wrapper,
+.ag-theme-alpine .ag-set-filter-list,
+.ag-theme-alpine .ag-filter-apply-panel,
+.ag-theme-alpine .ag-simple-filter-body-wrapper,
+.ag-theme-alpine .ag-tabs,
+.ag-theme-alpine .ag-tabs-header,
+.ag-theme-alpine .ag-tabs-body {
+    background-color: var(--vscode-input-background) !important;
+    color: var(--vscode-editor-foreground) !important;
+    border-color: var(--vscode-input-border, var(--vscode-tree-indentGuidesStroke)) !important;
+}
+
+.ag-theme-alpine .ag-filter-condition,
+.ag-theme-alpine .ag-tab,
+.ag-theme-alpine .ag-tab-selected,
+.ag-theme-alpine .ag-filter-select,
+.ag-theme-alpine .ag-picker-field-wrapper {
+    background-color: var(--vscode-input-background) !important;
+    color: var(--vscode-editor-foreground) !important;
+}
+
+.ag-theme-alpine input,
+.ag-theme-alpine select {
+    background-color: var(--vscode-input-background) !important;
+    color: var(--vscode-input-foreground, var(--vscode-editor-foreground)) !important;
+    border-color: var(--vscode-input-border, var(--vscode-tree-indentGuidesStroke)) !important;
+}
+
+.ag-theme-alpine button.ag-standard-button {
     background-color: var(--vscode-button-background) !important;
     color: var(--vscode-button-foreground) !important;
-    border-radius: 0px !important;
+    border: none;
+    border-radius: 0;
 }
 
-/* editor */
-.wj-grid-editor {
-    font-family: var(--vscode-font-family);
-    font-weight: var(--vscode-font-weight);
-    font-size: var(--vscode-font-size);
+.ag-theme-alpine button.ag-standard-button:hover {
+    background-color: var(--vscode-button-hoverBackground) !important;
 }
 
-/* FlexSheet */
-.wj-sheet-page {
-    height: 100%;
-}
-.wj-flexsheet .wj-tabholder {
+/* Sheet tabs for Excel viewer */
+#sheet-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
     background-color: var(--vscode-sideBar-background);
+    border-top: 1px solid var(--vscode-tree-indentGuidesStroke);
+    height: 32px;
+    align-items: stretch;
+    flex-shrink: 0;
 }
-.wj-flexsheet .wj-tabholder div.wj-sheet-page.wj-btn-group > button {
-    background-color: var(--vscode-sideBar-background);
-    color: var(--vscode-sideBar-foreground);
+
+#sheet-tabs::-webkit-scrollbar {
+    height: 4px;
 }
-.wj-flexsheet .wj-tabholder div.wj-sheet-page.wj-btn-group > button:hover {
-    background-color: var(--vscode-list-hoverBackground);
-    color: var(--vscode-list-hoverForeground);
+
+#sheet-tabs::-webkit-scrollbar-thumb {
+    background-color: var(--vscode-scrollbarSlider-background);
 }
-.wj-flexsheet .wj-tabholder .wj-sheet-tab ul li {
+
+.sheet-tab {
+    padding: 0 14px;
+    border: none;
+    border-right: 1px solid var(--vscode-tree-indentGuidesStroke);
     background-color: var(--vscode-list-inactiveSelectionBackground);
-    color: var(--vscode-list-inactiveSelectionForeground);
-    border-left: 1px solid transparent;
+    color: var(--vscode-list-inactiveSelectionForeground, var(--vscode-sideBar-foreground));
+    cursor: pointer;
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size, 12px);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
-.wj-flexsheet .wj-tabholder .wj-sheet-tab ul li.active {
+
+.sheet-tab:hover {
+    background-color: var(--vscode-list-hoverBackground);
+    color: var(--vscode-list-hoverForeground, var(--vscode-editor-foreground));
+}
+
+.sheet-tab.active {
     background-color: var(--vscode-list-activeSelectionBackground);
     color: var(--vscode-list-activeSelectionForeground);
-    border-left: 1px solid transparent;
+    font-weight: 600;
 }
-.wj-flexsheet .wj-tabholder .wj-sheet-tab ul li:not(.active):hover {
-    background-color: var(--vscode-button-background);
-    color: var(--vscode-button-foreground);
+
+/* Info bubble */
+#aboutInfo {
+    box-sizing: border-box;
+    position: fixed;
+    z-index: 10000;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+    padding: 4px 20px;
+    background: var(--vscode-statusBar-background, #007acc);
+    color: var(--vscode-statusBar-foreground, #fff);
+    text-align: right;
+    font-size: 11px;
+    height: 25px;
+    line-height: 17px;
 }
-.wj-flexsheet-context-menu {
-    background-color: var(--vscode-sideBar-background);
-    color: var(--vscode-sideBar-foreground);
-    border: 1px solid var(--vscode-dropdown-border);
+
+#aboutInfo a {
+    color: var(--vscode-statusBar-foreground, #fff);
+    text-decoration: none;
+    font-weight: 600;
 }
-.wj-flexsheet-context-menu .wj-context-menu-item:not(.wj-context-menu-item-selected):hover {
-    background-color: var(--vscode-list-activeSelectionBackground);
-    color: var(--vscode-list-activeSelectionForeground);
+
+#aboutInfo a:hover {
+    text-decoration: underline;
+}
+
+/* Prevent AG Grid internal elements from covering rows with opaque backgrounds.
+   The overlay and sticky-top inherit --ag-background-color / hardcoded white,
+   which creates opaque layers above the data rows. */
+.ag-theme-alpine .ag-overlay-panel,
+.ag-theme-alpine .ag-overlay-wrapper,
+.ag-theme-alpine .ag-sticky-top,
+.ag-theme-alpine .ag-sticky-bottom {
+    background-color: transparent !important;
+}
+
+/* Sheet container layout */
+#sheet-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }

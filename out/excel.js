@@ -1,221 +1,265 @@
 var sendMessage;
+var gridApi;
+var vsCodeApi;          // single instance — acquireVsCodeApi() can only be called once
+var workbook = null;
+var currentSheetIndex = 0;
+var undoStack = [];
+var redoStack = [];
+
+function getBinding(n) {
+    var h1 = Math.floor(n / 26);
+    var h2 = n % 26;
+    if (h1 > 0) {
+        return String.fromCharCode(64 + h1) + String.fromCharCode(65 + h2);
+    } else {
+        return String.fromCharCode(65 + h2);
+    }
+}
+
+function sheetToGridData(ws) {
+    if (!ws) return { colDefs: [], rowData: [] };
+    var aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    if (!aoa || aoa.length === 0) return { colDefs: [], rowData: [] };
+
+    var colCount = 0;
+    aoa.forEach(function(row) { if (row.length > colCount) colCount = row.length; });
+
+    var colDefs = [];
+    for (var c = 0; c < colCount; c++) {
+        colDefs.push({
+            field: getBinding(c),
+            headerName: getBinding(c),
+            sortable: true,
+            filter: true,
+            resizable: true,
+            editable: true,
+            minWidth: 40,
+            suppressMovable: false
+        });
+    }
+
+    var rowData = aoa.map(function(row) {
+        var obj = {};
+        for (var c = 0; c < colCount; c++) {
+            obj[getBinding(c)] = row[c] !== undefined ? row[c] : '';
+        }
+        return obj;
+    });
+
+    return { colDefs: colDefs, rowData: rowData };
+}
+
+function gridDataToSheet() {
+    if (!gridApi) return null;
+    var colDefs = gridApi.getColumnDefs().filter(function(c) { return c.field && !c.field.startsWith('__'); });
+    var aoa = [];
+    gridApi.forEachNode(function(node) {
+        var row = colDefs.map(function(c) {
+            var val = node.data[c.field];
+            return val !== undefined ? val : '';
+        });
+        aoa.push(row);
+    });
+    return XLSX.utils.aoa_to_sheet(aoa);
+}
+
+function saveCurrentSheetToWorkbook() {
+    if (!workbook || !gridApi) return;
+    var sheetName = workbook.SheetNames[currentSheetIndex];
+    if (!sheetName) return;
+    var ws = gridDataToSheet();
+    if (ws) workbook.Sheets[sheetName] = ws;
+}
+
+function snapshotWorkbook() {
+    if (!workbook) return null;
+    var snapshot = { sheetIndex: currentSheetIndex, sheets: {} };
+    workbook.SheetNames.forEach(function(name) {
+        var ws = workbook.Sheets[name];
+        snapshot.sheets[name] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    });
+    return snapshot;
+}
+
+function applySnapshot(snapshot) {
+    if (!snapshot || !workbook) return;
+    workbook.SheetNames.forEach(function(name) {
+        if (snapshot.sheets[name]) {
+            workbook.Sheets[name] = XLSX.utils.aoa_to_sheet(snapshot.sheets[name]);
+        }
+    });
+    loadSheet(snapshot.sheetIndex);
+}
+
+function loadSheet(index) {
+    if (!workbook || !gridApi) return;
+    currentSheetIndex = index;
+    var sheetName = workbook.SheetNames[index];
+    if (!sheetName) return;
+    var ws = workbook.Sheets[sheetName];
+    var result = sheetToGridData(ws);
+
+    gridApi.updateGridOptions({
+        columnDefs: result.colDefs,
+        rowData: result.rowData
+    });
+    gridApi.hideOverlay();
+
+    updateTabs();
+    setTimeout(function() {
+        if (result.colDefs.length > 0) gridApi.autoSizeAllColumns();
+    }, 50);
+}
+
+function updateTabs() {
+    if (!workbook) return;
+    var tabBar = document.getElementById('sheet-tabs');
+    if (!tabBar) return;
+    tabBar.innerHTML = '';
+    workbook.SheetNames.forEach(function(name, i) {
+        var tab = document.createElement('button');
+        tab.textContent = name;
+        tab.className = 'sheet-tab' + (i === currentSheetIndex ? ' active' : '');
+        tab.addEventListener('click', function() {
+            if (i === currentSheetIndex) return;
+            saveCurrentSheetToWorkbook();
+            loadSheet(i);
+        });
+        tabBar.appendChild(tab);
+    });
+}
+
+function getState() {
+    var options = getOptions();
+    return {
+        uri: options.uri,
+        previewUri: options.previewUri,
+        selectedSheetIndex: currentSheetIndex,
+        version: "5.0.0"
+    };
+}
+
+function doPreserveState() {
+    if (!vsCodeApi) return;
+    var state = getState();
+    vsCodeApi.setState(state);
+    vsCodeApi.postMessage({ save: true, state: state });
+}
 
 function initPage() {
-    const vscode = acquireVsCodeApi();
-    const options = getOptions();
-    sendMessage = vscode.postMessage;
-
-    var sheet = new wijmo.grid.sheet.FlexSheet("#sheet");
-    wijmo.setCss(sheet.hostElement, { "font-family": "" });
-
-    function getState() {
-        var sorts = [];
-        var items = sheet.sortManager.sortDescriptions.items;
-        for (var i = 0; i < items.length; i++) {
-            var desc = items[i];
-            sorts.push({
-                columnIndexvar: desc.columnIndex,
-                ascending: desc.ascending
-            });
-        }
-        var state = {
-            uri: options.uri,
-            previewUri: options.previewUri,
-            selectedSheetIndex: sheet.selectedSheetIndex,
-            filterDefinition: sheet.filter.filterDefinition,
-            sortDescriptions: JSON.stringify(sorts),
-            scrollPosition: sheet.scrollPosition,
-            version: "4.0.45"
-        };
-        return state;
-    }
-
-    function preserveState() {
-        var state = getState();
-        vscode.setState(state);
-        vscode.postMessage({ save: true, state: state });
-    }
+    vsCodeApi = acquireVsCodeApi();   // called exactly once here
+    var options = getOptions();
+    sendMessage = vsCodeApi.postMessage.bind(vsCodeApi);
 
     function applyState() {
         if (ignoreState()) return;
-        var json = vscode.getState() || options.state;
-        if (json && json.version && json.version >= "4.0.45") {
-            if (json.selectedSheetIndex >= 0) {
-                sheet.selectedSheetIndex = json.selectedSheetIndex;
-            }
-            sheet.filter.filterDefinition = json.filterDefinition;
-            if (json.sortDescriptions) {
-                var sorts = JSON.parse(json.sortDescriptions);
-                sorts = sorts.map((s) => {
-                    return new wijmo.grid.sheet.ColumnSortDescription(s.columnIndex, s.ascending);
-                });
-                sheet.sortManager.sortDescriptions = new wijmo.collections.CollectionView(sorts);
-            }
-            if (json.scrollPosition) {
-                sheet.scrollPosition = json.scrollPosition;
+        var json = vsCodeApi.getState() || options.state;
+        if (json && json.version && json.version >= "5.0.0") {
+            if (json.selectedSheetIndex >= 0 && workbook
+                && json.selectedSheetIndex < workbook.SheetNames.length) {
+                saveCurrentSheetToWorkbook();
+                loadSheet(json.selectedSheetIndex);
             }
         }
     }
 
-    // http://jsfiddle.net/Wijmo5/2a20kqvr/
-    function autoSizeVisibleRows(flex, force) {
-        var rng = flex.viewRange;
-        for (var r = rng.row; r <= rng.row2; r++) {
-            if (force || flex.rows[r].height == null) {
-                flex.autoSizeRow(r, false);
+    var gridOptions = {
+        columnDefs: [],
+        rowData: [],
+        defaultColDef: {
+            sortable: true,
+            filter: true,
+            resizable: true,
+            editable: options.customEditor,
+            minWidth: 40
+        },
+        rowHeight: 28,
+        suppressScrollOnNewData: true,
+        stopEditingWhenCellsLoseFocus: true,
+        onCellValueChanged: function() {
+            if (!options.customEditor) return;
+            vsCodeApi.postMessage({ changed: true, reason: "Cell Edited" });
+            doPreserveState();
+        },
+        onCellEditingStarted: function() {
+            saveCurrentSheetToWorkbook();
+            var snap = snapshotWorkbook();
+            if (snap) {
+                undoStack.push(snap);
+                if (undoStack.length > 50) undoStack.shift();
+                redoStack = [];
             }
+        },
+        onColumnResized: function(e) { if (e.finished) doPreserveState(); },
+        onSortChanged: function() { doPreserveState(); },
+        onFilterChanged: function() { doPreserveState(); },
+        onGridReady: function() {
+            vsCodeApi.postMessage({ refresh: true });
         }
-    }
+    };
 
-    var news = wijmo.getElement("[wj-part='new-sheet']");
-    news.parentElement.removeChild(news);
+    var container = document.getElementById('sheet');
+    gridApi = agGrid.createGrid(container, gridOptions);
 
-    sheet.hostElement.addEventListener("contextmenu", e => {
-        if (!options.customEditor || e.target.tagName.toLowerCase() === "li") {
-            e.preventDefault();
-            e.stopPropagation();
-        }
+    container.addEventListener('contextmenu', function(e) {
+        if (!options.customEditor) { e.preventDefault(); e.stopPropagation(); }
     }, true);
-
-    sheet.loaded.addHandler(() => {
-        sheet.columns.forEach(c => c.isContentHtml = c.multiLine = true);
-        var style = getSheetStyle(sheet);
-        sheet.sheets.forEach(s => {
-            s.tables.forEach(t => {
-                t.style = style;
-            });
-        });
-        sheet.isReadOnly = !options.customEditor;
-        sheet.showMarquee = false;
-        applyState();
-        preserveState();
-
-        setTimeout(() => {
-            sheet.autoSizeColumn(0, true);
-            autoSizeVisibleRows(sheet, true);
-        }, 0);
-
-        sheet.filter.filterApplied.addHandler(() => {
-            preserveState();
-        });
-    
-        sheet.selectedSheetChanged.addHandler(() => {
-            preserveState();
-            sheet.autoSizeColumn(0, true);
-        });
-
-        sheet.sortManager.sortDescriptions.collectionChanged.addHandler(() => {
-            preserveState();
-        });
-
-        sheet.scrollPositionChanged.addHandler(() => {
-            preserveState();
-        });
-        
-        sheet.sheets.collectionChanged.addHandler((s, e) => {
-            vscode.postMessage({
-                changed: true,
-                reason: "Collection Changed"
-            });
-        });
-
-        sheet.rowChanged.addHandler((s, e) => {
-            vscode.postMessage({
-                changed: true,
-                reason: "Row Changed"
-            });
-        });
-
-        sheet.columnChanged.addHandler((s, e) => {
-            vscode.postMessage({
-                changed: true,
-                reason: "Column Changed"
-            });
-        });
-
-        sheet.cellEditEnded.addHandler(function(s, e) {
-            vscode.postMessage({
-                changed: true,
-                reason: "Cell Edited"
-            });
-        });
-    });
-    
-    vscode.postMessage({ refresh: true });
 }
 
 function resizeSheet() {
-    const options = getOptions();
-    var div = wijmo.getElement("#sheet");
-    var bubble = document.getElementById("aboutWjmo");
-    var heightOffset = 25;
-    if(bubble){
-        bubble.style.display='';
-    }
-    if(options.showInfo == null || options.showInfo == false)
-    {
-        heightOffset = 0;
-        if(bubble){
-            bubble.style.display='none';
-        }
-    }
-    div.style.height = (window.innerHeight - heightOffset).toString() + "px";
-}
+    var options = getOptions();
+    var bubble = document.getElementById('aboutInfo');
+    var tabBar = document.getElementById('sheet-tabs');
+    var tabHeight = tabBar ? (tabBar.offsetHeight || 32) : 32;
+    var heightOffset = tabHeight;
 
-function cssVar(name, value) {
-    if (name.substr(0, 2) !== "--") {
-        name = "--" + name;
+    var sheetDiv = document.getElementById('sheet');
+    if (sheetDiv) {
+        sheetDiv.style.height = (window.innerHeight - heightOffset) + "px";
     }
-    if (value) {
-        document.documentElement.style.setProperty(name, value)
-    }
-    return getComputedStyle(document.documentElement).getPropertyValue(name);
-}
-
-function getSheetStyle(sheet) {
-    var style = sheet.getBuiltInTableStyle("TableStyleLight1");
-    style.wholeTableStyle.borderTopColor = cssVar("vscode-editor-foreground");
-    style.wholeTableStyle.borderBottomColor = cssVar("vscode-editor-foreground");
-    style.wholeTableStyle.color = cssVar("vscode-editor-foreground");
-    style.wholeTableStyle.backgroundColor = cssVar("vscode-editor-background");
-    style.firstBandedRowStyle.color = cssVar("vscode-sideBar-foreground");
-    style.firstBandedRowStyle.backgroundColor = cssVar("vscode-sideBar-background");
-    style.firstBandedColumnStyle.color = cssVar("vscode-sideBar-foreground");
-    style.firstBandedColumnStyle.backgroundColor = cssVar("vscode-sideBar-background");
-    style.headerRowStyle.color = cssVar("vscode-titleBar-activeForeground");
-    style.headerRowStyle.backgroundColor = cssVar("vscode-titleBar-activeBackground");
-    style.headerRowStyle.borderBottomColor = cssVar("vscode-tree-indentGuidesStroke");
-    return style;
 }
 
 function handleEvents() {
-    window.addEventListener("message", event => {
-        var sheet = wijmo.Control.getControl("#sheet");
+    window.addEventListener("message", function(event) {
+        // vsCodeApi is set by initPage() which runs before any messages arrive
         if (event.data.refresh) {
-            var data = event.data.content.data ?? event.data.content;
-            var blob = new Blob([new Uint8Array(data)]);
-            sheet.load(blob);
-        }
-        else if (event.data.type == "getData") {
-            var workbook = sheet.save();
-            var base64 = workbook.save();
-            var binary = window.atob(base64);
-            var len = binary.length;
-            var bytes = new Uint8Array(len);
-            for (var i = 0; i < len; i++) {
-                bytes[i] = binary.charCodeAt(i);
+            var data = event.data.content.data || event.data.content;
+            workbook = XLSX.read(new Uint8Array(data), { type: 'array', cellFormula: false, cellHTML: false });
+            undoStack = [];
+            redoStack = [];
+            currentSheetIndex = 0;
+
+            var json = vsCodeApi.getState() || getOptions().state;
+            if (json && json.version >= "5.0.0" && json.selectedSheetIndex >= 0
+                && json.selectedSheetIndex < workbook.SheetNames.length) {
+                currentSheetIndex = json.selectedSheetIndex;
             }
-            sendMessage({
-                response: true,
-                requestId: event.data.requestId,
-                body: bytes
-            })
+
+            loadSheet(currentSheetIndex);
+            resizeSheet();
+        }
+        else if (event.data.type === "getData") {
+            saveCurrentSheetToWorkbook();
+            var bytes = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+            sendMessage({ response: true, requestId: event.data.requestId, body: new Uint8Array(bytes) });
         }
         else if (event.data.undo) {
-            sheet.undo();
+            if (undoStack.length > 0) {
+                saveCurrentSheetToWorkbook();
+                var fwd = snapshotWorkbook();
+                if (fwd) { redoStack.push(fwd); if (redoStack.length > 50) redoStack.shift(); }
+                applySnapshot(undoStack.pop());
+                vsCodeApi.postMessage({ changed: true, reason: "Undo" });
+            }
         }
         else if (event.data.redo) {
-            sheet.redo();
+            if (redoStack.length > 0) {
+                saveCurrentSheetToWorkbook();
+                var bck = snapshotWorkbook();
+                if (bck) { undoStack.push(bck); if (undoStack.length > 50) undoStack.shift(); }
+                applySnapshot(redoStack.pop());
+                vsCodeApi.postMessage({ changed: true, reason: "Redo" });
+            }
         }
     });
 }

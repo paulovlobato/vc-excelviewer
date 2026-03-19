@@ -1,5 +1,5 @@
 'use strict';
-import { window, ExtensionContext, Disposable, ViewColumn, Webview, WebviewPanel, Memento, workspace } from 'vscode';
+import { window, ExtensionContext, Disposable, ViewColumn, Webview, WebviewPanel, Memento, workspace, Uri } from 'vscode';
 import { URI, Utils } from 'vscode-uri';
 import { documentViewManager } from './documentViewManager';
 
@@ -8,6 +8,7 @@ export default abstract class BaseDocumentView {
     private _uri: URI;
     private _previewUri: URI;
     private _scriptUri: URI;
+    private _extensionUri: Uri;
     private _storage: Memento;
     private _panel: WebviewPanel;
     private _customEditor: boolean = true;
@@ -16,6 +17,7 @@ export default abstract class BaseDocumentView {
 
     constructor(context: ExtensionContext, uri: URI) {
         this._uri = uri;
+        this._extensionUri = context.extensionUri;
         this._scriptUri = Utils.joinPath(context.extensionUri, 'out');
         this._storage = context.workspaceState;
         documentViewManager.add(this);
@@ -27,7 +29,8 @@ export default abstract class BaseDocumentView {
             enableScripts: true,
             enableCommandUris: true,
             enableFindWidget: true,
-            retainContextWhenHidden: true
+            retainContextWhenHidden: true,
+            localResourceRoots: [Uri.joinPath(this._extensionUri, 'out')]
         });
         return this.attachWebviewPanel(panel);
     }
@@ -113,7 +116,8 @@ export default abstract class BaseDocumentView {
         this._panel = value;
         value.webview.options = {
 			enableScripts: true,
-			enableCommandUris: true
+			enableCommandUris: true,
+            localResourceRoots: [Uri.joinPath(this._extensionUri, 'out')]
 		};
         this._panel.onDidDispose(() => {
             this.dispose();

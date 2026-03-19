@@ -1,22 +1,22 @@
 {
-    "name": "gc-excelviewer",
-    "displayName": "Excel Viewer",
-    "description": "Edit Excel spreadsheets and CSV files in Visual Studio Code and VS Code for the Web.",
-    "version": "4.2.64",
-    "icon": "img/gc-excelviewer.png",
-    "publisher": "GrapeCity",
+    "name": "csv-excel-viewer",
+    "displayName": "CSV & Excel Viewer",
+    "description": "Preview CSV files and Excel spreadsheets in Visual Studio Code using AG Grid Community and SheetJS — no license required.",
+    "version": "1.0.0",
+    "icon": "img/csv-excel-viewer.png",
+    "publisher": "Development42",
     "license": "SEE LICENSE IN LICENSE.txt",
     "galleryBanner": {
         "color": "#7092BE",
         "theme": "dark"
     },
     "bugs": {
-        "url": "https://github.com/wijmo/gc-excelviewer/issues"
+        "url": "https://github.com/paulovlobato/vc-excelviewer/issues"
     },
-    "homepage": "https://github.com/wijmo/gc-excelviewer/blob/master/README.md",
+    "homepage": "https://github.com/paulovlobato/vc-excelviewer",
     "repository": {
         "type": "git",
-        "url": "https://github.com/wijmo/gc-excelviewer.git"
+        "url": "https://github.com/paulovlobato/vc-excelviewer.git"
     },
     "engines": {
         "vscode": "^1.63.0"
@@ -38,12 +38,12 @@
         "onLanguage:csv",
         "onLanguage:tsv",
         "onLanguage:excel",
-        "onWebviewPanel:gc-excelviewer-csv",
-        "onWebviewPanel:gc-excelviewer-excel",
-        "onWebviewPanel:gc-excelviewer-csv-preview",
-        "onWebviewPanel:gc-excelviewer-excel-preview",
-        "onCustomEditor:gc-excelviewer-csv-editor",
-        "onCustomEditor:gc-excelviewer-excel-editor"
+        "onWebviewPanel:csv-excel-viewer-csv",
+        "onWebviewPanel:csv-excel-viewer-excel",
+        "onWebviewPanel:csv-excel-viewer-csv-preview",
+        "onWebviewPanel:csv-excel-viewer-excel-preview",
+        "onCustomEditor:csv-excel-viewer-csv-editor",
+        "onCustomEditor:csv-excel-viewer-excel-editor"
     ],
     "main": "./dist/extension",
     "browser": "./dist/extension",
@@ -255,7 +255,7 @@
         ],
         "customEditors": [
             {
-                "viewType": "gc-excelviewer-csv-editor",
+                "viewType": "csv-excel-viewer-csv-editor",
                 "displayName": "CSV Editor",
                 "priority": "option",
                 "selector": [
@@ -271,7 +271,7 @@
                 ]
             },
             {
-                "viewType": "gc-excelviewer-excel-editor",
+                "viewType": "csv-excel-viewer-excel-editor",
                 "displayName": "Excel Editor",
                 "priority": "default",
                 "selector": [
@@ -286,12 +286,12 @@
         ],
         "configuration": {
             "type": "object",
-            "title": "Excel Viewer",
+            "title": "CSV & Excel Viewer",
             "properties": {
                 "excel-viewer.showInfo": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Specifies whether an information bubble will be shown under the preview window. The information describes which DataGrid is used in this extensions and links to more information."
+                    "description": "Specifies whether an information bar will be shown at the bottom of the preview window."
                 },
                 "csv-preview.separator": {
                     "type": "string",
@@ -350,12 +350,12 @@
                         "never",
                         "unquoted"
                     ],
-                    "default": "always",
+                    "default": "never",
                     "description": "Specifies whether to format numeric values in CSV files, or to treat them as strings."
                 },
                 "csv-preview.numberFormat": {
                     "type": "string",
-                    "default": "g2",
+                    "default": "g6",
                     "markdownDescription": "Specifies a [.NET-style format string](https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-numeric-format-strings) used to format numeric columns in CSV files."
                 },
                 "csv-preview.openStdin": {

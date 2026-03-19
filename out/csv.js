@@ -1,4 +1,6 @@
 var sendMessage;
+var gridApi;
+var sourceData = [];
 
 function initPage() {
     const vscode = acquireVsCodeApi();
@@ -6,34 +8,62 @@ function initPage() {
     const NEWLINES = "__newlines";
     sendMessage = vscode.postMessage;
 
-    var flex = new wijmo.grid.FlexGrid("#flex", {
-        autoGenerateColumns: false,
-        isReadOnly: !options.customEditor,
-        allowDelete: options.customEditor,
-        allowAddNew: options.customEditor,
-        stickyHeaders: true,
-        keyActionTab: wijmo.grid.KeyAction.Cycle,
-        allowDragging: wijmo.grid.AllowDragging.None
-    });
+    function countNewlines(obj) {
+        var count = 0;
+        Object.keys(obj).forEach(function(key) {
+            if (key.startsWith('__')) return;
+            var value = obj[key];
+            if (typeof value === 'string') {
+                count += value.split("\n").length - 1;
+            }
+        });
+        return count;
+    }
 
-    var filter = new wijmo.grid.filter.FlexGridFilter(flex);
+    function getRowRange(dataItem) {
+        var sourceIndex = sourceData.indexOf(dataItem);
+        var rangeStart = sourceIndex;
+        for (var i = 0; i < sourceIndex; i++) {
+            rangeStart += (sourceData[i][NEWLINES] || 0);
+        }
+        var rangeEnd = rangeStart + (dataItem[NEWLINES] || 0) + 1;
+        dataItem[NEWLINES] = countNewlines(dataItem);
+        return { start: rangeStart, end: rangeEnd };
+    }
+
+    function bindingToIndex(binding) {
+        if (binding.length === 1) {
+            return binding.charCodeAt(0) - 65;
+        }
+        return (binding.charCodeAt(0) - 64) * 26 + (binding.charCodeAt(1) - 65);
+    }
+
+    function toHeaderCase(text) {
+        return text.replace(/(\b\w)/g, function(ch) { return ch.toUpperCase(); });
+    }
+
+    function formatNumber(value, format) {
+        if (typeof value !== 'number' || !format) return value;
+        var match = /^([gnf])(\d+)$/i.exec(format);
+        if (!match) return value;
+        var type = match[1].toLowerCase();
+        var digits = parseInt(match[2]);
+        if (type === 'g') return parseFloat(value.toPrecision(digits)).toString();
+        if (type === 'n' || type === 'f') return value.toFixed(digits);
+        return String(value);
+    }
 
     function getState() {
         var state = {
             uri: options.uri,
             previewUri: options.previewUri,
             languageId: options.languageId,
-            columnLayout: flex.columnLayout,
-            filterDefinition: filter.filterDefinition,
-            sortDescriptions: flex.collectionView.sortDescriptions.map(function (sd) {
-                return {
-                    property: sd.property,
-                    ascending: sd.ascending
-                }
-            }),
-            scrollPosition: flex.scrollPosition,
-            version: "4.0.45"
+            version: "5.0.0"
         };
+        if (gridApi) {
+            state.columnState = gridApi.getColumnState();
+            state.filterModel = gridApi.getFilterModel();
+        }
         return state;
     }
 
@@ -43,218 +73,124 @@ function initPage() {
         vscode.postMessage({ save: true, state: state });
     }
 
-    function layoutChanged(state, flex) {
-        if (!state.version || state.version < "4.0.45") {
-            return true;
-        }
-        var stateCols = JSON.parse(state.columnLayout).columns;
-        var flexCols = JSON.parse(flex.columnLayout).columns;
-        if (stateCols.length != flexCols.length) {
-            return true;
-        }
-        for (var i = 0; i < stateCols.length; i++) {
-            if (stateCols[i].header !== flexCols[i].header) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
     function applyState() {
         if (ignoreState()) return;
         var json = vscode.getState() || options.state;
-        if (json && !layoutChanged(json, flex)) {
-            flex.columnLayout = json.columnLayout;
-            filter.filterDefinition = json.filterDefinition;
-            json.sortDescriptions.forEach(function (item) {
-                var sd = new wijmo.collections.SortDescription(item.property, item.ascending);
-                flex.collectionView.sortDescriptions.push(sd);
-            });
-            if (json.scrollPosition) {
-                flex.scrollPosition = json.scrollPosition;
-            }
-        }    
-    }
-
-    var needRowResize = false;
-    var emptyRange = new wijmo.grid.CellRange(0, 0);
-
-    // http://jsfiddle.net/Wijmo5/2a20kqvr/
-    function autoSizeVisibleRows(flex, force) {
-        var rng = flex.viewRange;
-        needRowResize = rng.equals(emptyRange);
-        for (var r = rng.row; r <= rng.row2; r++) {
-            if (force || flex.rows[r].height == null) {
-                flex.autoSizeRow(r, false);
-            }
+        if (!json || !json.version || json.version < "5.0.0") return;
+        if (json.columnState) {
+            gridApi.applyColumnState({ state: json.columnState, applyOrder: true });
+        }
+        if (json.filterModel) {
+            gridApi.setFilterModel(json.filterModel);
         }
     }
-
-    flex.updatedView.addHandler(function(s, e) {
-        if (needRowResize) {
-            autoSizeVisibleRows(s, true);
-            needRowResize = false;
-        }
-    });
-
-    flex.itemsSourceChanged.addHandler(function(s, e) {
-        applyState();
-        var resize = options.resizeColumns;
-        if (resize === "all") {
-            flex.autoSizeColumns();
-        } else if (resize === "first") {
-            flex.autoSizeColumn(0);
-        }
-        autoSizeVisibleRows(flex, true);
-        preserveState();
-        if (flex.collectionView) {
-            flex.collectionView.collectionChanged.addHandler(() => {
-                preserveState();
-                autoSizeVisibleRows(flex, true);
-            });
-        }
-    });
-
-    flex.sortingColumn.addHandler(function(s, e) {
-        preserveState();
-        autoSizeVisibleRows(flex, true);
-    });
 
     var numbersOrdinal = options.lineNumbers === "ordinal";
     var numbersSource = options.lineNumbers === "source";
     var lineNumbers = numbersOrdinal || numbersSource;
 
-    flex.formatItem.addHandler(function(s, e) {
-        if (lineNumbers) {
-            if (e.panel.cellType == wijmo.grid.CellType.RowHeader) {
-                var row = flex.rows[e.row];
-                if (!(row instanceof wijmo.grid._NewRowTemplate)) {
-                    if (numbersSource) {
-                        var source = flex.collectionView.sourceCollection;
-                        var n = source.indexOf(row.dataItem) + 1;
-                        e.cell.textContent = n.toString();
-                    } else if (numbersOrdinal) {
-                        e.cell.textContent = (e.row + 1).toString();
-                    }
-                }
-            }
-        }
-        if (options.capitalizeHeaders) {
-            if (e.panel.cellType == wijmo.grid.CellType.ColumnHeader) {
-                var html = e.cell.innerHTML;
-                var text = e.cell.innerText.trim();
-                var n = html.lastIndexOf(text);
-                text = wijmo.toHeaderCase(text);
-                if (n > 0) {
-                    e.cell.innerHTML = html.slice(0, n) + text + html.slice(n + text.length);
-                } else {
-                    e.cell.innerHTML = text;
-                }
-            }
-        }
-    });
-
-    flex.resizedColumn.addHandler(() => {
-        preserveState();
-        autoSizeVisibleRows(flex, true);
-    });
-
-    flex.scrollPositionChanged.addHandler(() => {
-        preserveState();
-        autoSizeVisibleRows(flex, false);
-    });
-
-    flex.cellEditEnding.addHandler(function(s, e) {
-        var active = s.activeEditor.value;
-        var dataItem = s.rows[e.row].dataItem;
-        var binding = s.columns[e.col].binding;
-        dataItem[binding] = active;
-    });
-
-    function countNewlines(obj) {
-        var count = 0;
-        Object.keys(obj).forEach(key => {
-            var value = obj[key];
-            if (typeof value === 'string') {
-                count += value.split("\n").length - 1;
-            }
-        });
-        return count;
+    var lineNumColDef = null;
+    if (lineNumbers) {
+        lineNumColDef = {
+            headerName: '',
+            colId: '__lineNum',
+            width: 55,
+            minWidth: 40,
+            maxWidth: 80,
+            sortable: false,
+            filter: false,
+            editable: false,
+            resizable: false,
+            suppressMovable: true,
+            cellStyle: { color: 'var(--vscode-editorLineNumber-foreground)', textAlign: 'right' },
+            valueGetter: numbersSource
+                ? function(params) {
+                    var idx = sourceData.indexOf(params.data);
+                    return idx >= 0 ? idx + 1 : '';
+                  }
+                : function(params) { return params.node.rowIndex + 1; }
+        };
     }
 
-    function getRowRange(s, index) {
-        var gridRow = s.rows[index];
-        var source = s.collectionView.sourceCollection;
-        var sourceRow = source.indexOf(gridRow.dataItem);
-        var sourceItem = source[sourceRow];
-        var rangeStart = sourceRow, rangeEnd;
-        source.slice(0, sourceRow).forEach(r => rangeStart += r[NEWLINES]);
-        rangeEnd = rangeStart + sourceItem[NEWLINES] + 1;
-        sourceItem[NEWLINES] = countNewlines(sourceItem);
-        return { start: rangeStart, end: rangeEnd };
-    }
-
-    function cellEditEnded(s, e) {
-        var oldValue = e.data;
-        var newValue = s.getCellData(e.row, e.col);
-        if (oldValue !== newValue) {
-            var range = getRowRange(s, e.row);
-            vscode.postMessage({
-                cellEditEnded: true,
-                rows: range,
-                col: e.col,
-                value: newValue
+    var gridOptions = {
+        columnDefs: lineNumColDef ? [lineNumColDef] : [],
+        rowData: [],
+        defaultColDef: {
+            sortable: true,
+            filter: true,
+            resizable: true,
+            editable: options.customEditor,
+            minWidth: 40,
+            suppressMovable: true
+        },
+        rowHeight: 28,
+        rowBuffer: 20,
+        suppressScrollOnNewData: true,
+        stopEditingWhenCellsLoseFocus: true,
+        rowSelection: options.customEditor
+            ? { mode: 'multiRow', enableClickSelection: false }
+            : undefined,
+        onColumnResized: function(e) {
+            if (e.finished) preserveState();
+        },
+        onSortChanged: function() { preserveState(); },
+        onFilterChanged: function() { preserveState(); },
+        onBodyScrollEnd: function() { preserveState(); },
+        onCellValueChanged: function(params) {
+            if (!options.customEditor) return;
+            var field = params.column.getColId();
+            var colIdx = bindingToIndex(field);
+            var range = getRowRange(params.data);
+            var newVal = params.newValue !== undefined && params.newValue !== null
+                ? String(params.newValue) : '';
+            vscode.postMessage({ cellEditEnded: true, rows: range, col: colIdx, value: newVal });
+            vscode.postMessage({ rowEditEnded: true, cancel: false });
+            preserveState();
+        },
+        onCellKeyDown: options.customEditor ? function(params) {
+            if (params.event.key !== 'Delete') return;
+            if (gridApi.getEditingCells().length > 0) return;
+            var selected = gridApi.getSelectedRows();
+            if (selected.length === 0) return;
+            var sourceRows = selected.map(function(data) { return getRowRange(data); });
+            selected.forEach(function(data) {
+                var idx = sourceData.indexOf(data);
+                if (idx >= 0) sourceData.splice(idx, 1);
             });
+            gridApi.setGridOption('rowData', sourceData.slice());
+            vscode.postMessage({ deleteRows: true, rows: sourceRows });
+            preserveState();
+        } : undefined,
+        onRowDataUpdated: function() {
+            var resize = options.resizeColumns;
+            if (resize === 'all') {
+                setTimeout(function() { gridApi.autoSizeAllColumns(); }, 0);
+            } else if (resize === 'first') {
+                setTimeout(function() {
+                    var cols = gridApi.getColumns();
+                    if (cols && cols.length > 0) {
+                        var first = lineNumColDef ? cols[1] : cols[0];
+                        if (first) gridApi.autoSizeColumns([first.getId()]);
+                    }
+                }, 0);
+            }
+            // Do NOT call applyState() here — applying a stale stored filter model
+            // immediately after setGridOption('rowData') would hide all rows.
+            // applyState() is called in onFirstDataRendered instead.
+            preserveState();
+        },
+        onFirstDataRendered: function() {
+            // Apply saved column/filter state only after the first rows are actually
+            // painted — prevents stale filter models from immediately hiding all rows.
+            applyState();
+        },
+        onGridReady: function() {
+            vscode.postMessage({ refresh: true });
         }
-    }
+    };
 
-    flex.cellEditEnded.addHandler(function(s, e) {
-        cellEditEnded(s, e);
-    });
-
-    flex.pastedCell.addHandler(function(s, e) {
-        cellEditEnded(s, e);
-    });
-
-    flex.rowEditEnded.addHandler(function(s, e) {
-        vscode.postMessage({
-            rowEditEnded: true,
-            cancel: e.cancel
-        });
-    });
-
-    flex.deletingRow.addHandler(function(s, e) {
-        if (e.cancel) return;
-        e.cancel = true;
-        var sourceRows = [], indexRows = [];
-        var source = s.collectionView.sourceCollection;
-        for (var n = s.selection.topRow; n <= s.selection.bottomRow; n++) {
-            var gridRow = s.rows[n];
-            var sourceRow = source.indexOf(gridRow.dataItem);
-            var rangeStart = sourceRow, rangeEnd;
-            source.slice(0, sourceRow).forEach(r => rangeStart += r[NEWLINES]);
-            rangeEnd = rangeStart + source[sourceRow][NEWLINES] + 1;
-            sourceRows.push({start: rangeStart, end: rangeEnd});
-            indexRows.push(n);
-        }
-        indexRows.reverse();
-        indexRows.forEach((n) => {
-            s.editableCollectionView.removeAt(n);
-        });
-        vscode.postMessage({
-            deleteRows: true,
-            rows: sourceRows
-        });
-    });
-
-    flex.rowAdded.addHandler(function(s, e) {
-        vscode.postMessage({
-            rowAdded: true,
-            count: s.columns.length
-        });
-    });
-
-    vscode.postMessage({ refresh: true });
+    var container = document.getElementById('flex');
+    gridApi = agGrid.createGrid(container, gridOptions);
 }
 
 function parseContent(text) {
@@ -268,15 +204,11 @@ function parseContent(text) {
     var formatUnquoted = options.formatValues === "unquoted";
     var format = options.numberFormat;
 
-    var regexQuote = new RegExp(`^${quote}([\\S\\s]*)${quote}$`);
-    var regexDoubleQuote = new RegExp(`${quote}${quote}`, 'g');
+    var regexQuote = new RegExp('^' + quote + '([\\S\\s]*)' + quote + '$');
+    var regexDoubleQuote = new RegExp(quote + quote, 'g');
     var regexComment = new RegExp(String.raw`^\s*${comment}|^\s+$`);
-
-    // based on https://softwareengineering.stackexchange.com/a/368124
-    var regexLines = new RegExp(`((${quote}(?:[^${quote}]|)+${quote}|[^${quote}\n\r]+)+)`, 'g');
-
-    // http://markmintoff.com/2013/03/regex-split-by-comma-not-surrounded-by-quotes/
-    var regexItems = new RegExp(`${sep}(?=(?:[^${quote}]*${quote}[^${quote}]*${quote})*[^${quote}]*$)`);
+    var regexLines = new RegExp('((' + quote + '(?:[^' + quote + ']|)+' + quote + '|[^' + quote + '\n\r]+)+)', 'g');
+    var regexItems = new RegExp(sep + '(?=(?:[^' + quote + ']*' + quote + '[^' + quote + ']*' + quote + ')*[^' + quote + ']*$)');
 
     function unquote(cell) {
         if (cell.text.length > 0) {
@@ -290,7 +222,7 @@ function parseContent(text) {
     }
 
     function dblquote(text) {
-        return text.length > 1 ? text.replace(regexDoubleQuote, `${quote}`) : text;
+        return text.length > 1 ? text.replace(regexDoubleQuote, quote) : text;
     }
 
     function isComment(text) {
@@ -302,13 +234,11 @@ function parseContent(text) {
         var left = line.slice(0, 4).toLowerCase();
         var result = (left === "sep=");
         if (result && line.length == 5) {
-            var escapes = `+*?^$\.[]{}()|/`;
+            var escapes = '+*?^$\\.[]{}()|/';
             var char = line.slice(4);
-            sep = (escapes.indexOf(char) >= 0) ? "\\".concat(char) : char;
-            regexItems = new RegExp(`${sep}(?=(?:[^${quote}]*${quote}[^${quote}]*${quote})*[^${quote}]*$)`);
-            sendMessage({
-                separator: sep
-            });    
+            sep = (escapes.indexOf(char) >= 0) ? '\\'.concat(char) : char;
+            regexItems = new RegExp(sep + '(?=(?:[^' + quote + ']*' + quote + '[^' + quote + ']*' + quote + ')*[^' + quote + ']*$)');
+            sendMessage({ separator: sep });
         }
         return result;
     }
@@ -324,7 +254,8 @@ function parseContent(text) {
     }
 
     var data = [], headers = [], bindings = [];
-    var lines = text.match(regexLines);
+    var lines = text ? text.split(/\r?\n/) : null;
+    if (!lines) return { data: data, bindings: bindings };
     var firstLine = hasHeaders;
     var maxLength = 0;
 
@@ -370,47 +301,90 @@ function parseContent(text) {
         bindings.push({
             binding: key,
             header: header.length > 0 ? header : " ",
-            format: format,
-            multiLine: true
+            format: format
         });
     }
 
-    return {
-        data: data,
-        bindings: bindings
-    }
+    return { data: data, bindings: bindings };
 }
 
 function resizeGrid() {
-    const options = getOptions();
-    var div = wijmo.getElement("#flex");
-    var bubble = document.getElementById("aboutWjmo");
-    var heightOffset = 25;
-    if(bubble){
-        bubble.style.display='';
-    }
-    if(options.showInfo == null || options.showInfo == false)
-    {
-        heightOffset = 0;
-        if(bubble){
-            bubble.style.display='none';
-        }
-    }
-    div.style.height = (window.innerHeight - heightOffset).toString() + "px";
+    var div = document.getElementById('flex');
+    div.style.height = window.innerHeight.toString() + "px";
 }
 
 function handleEvents() {
-    window.addEventListener("message", event => {
+    window.addEventListener("message", function(event) {
         if (event.data.refresh) {
-            var flex = wijmo.Control.getControl("#flex");
             var content = parseContent(event.data.content);
-            flex.beginUpdate();
-            flex.columns.clear();
-            content.bindings.forEach((b) => {
-                flex.columns.push(new wijmo.grid.Column(b));
+            sourceData = content.data;
+
+            var colDefs = [];
+            // Re-add line number column if needed
+            var numbersOrdinal = getOptions().lineNumbers === "ordinal";
+            var numbersSource = getOptions().lineNumbers === "source";
+            if (numbersOrdinal || numbersSource) {
+                colDefs.push({
+                    headerName: '',
+                    colId: '__lineNum',
+                    width: 55,
+                    minWidth: 40,
+                    maxWidth: 80,
+                    sortable: false,
+                    filter: false,
+                    editable: false,
+                    resizable: false,
+                    suppressMovable: true,
+                    cellStyle: { color: 'var(--vscode-editorLineNumber-foreground)', textAlign: 'right' },
+                    valueGetter: numbersSource
+                        ? function(params) {
+                            var idx = sourceData.indexOf(params.data);
+                            return idx >= 0 ? idx + 1 : '';
+                          }
+                        : function(params) { return params.node.rowIndex + 1; }
+                });
+            }
+
+            var opts = getOptions();
+            content.bindings.forEach(function(b) {
+                var headerName = opts.capitalizeHeaders
+                    ? b.header.replace(/(\b\w)/g, function(ch) { return ch.toUpperCase(); })
+                    : b.header;
+                var colDef = {
+                    field: b.binding,
+                    headerName: headerName,
+                    filter: true,
+                    resizable: true,
+                    sortable: true,
+                    suppressMovable: true
+                };
+                if (b.format) {
+                    colDef.valueFormatter = function(params) {
+                        if (typeof params.value === 'number') {
+                            var match = /^([gnf])(\d+)$/i.exec(b.format);
+                            if (match) {
+                                var type = match[1].toLowerCase();
+                                var digits = parseInt(match[2]);
+                                if (type === 'g') return parseFloat(params.value.toPrecision(digits)).toString();
+                                if (type === 'n' || type === 'f') return params.value.toFixed(digits);
+                            }
+                        }
+                        return params.value;
+                    };
+                }
+                colDefs.push(colDef);
             });
-            flex.itemsSource = content.data;
-            flex.endUpdate();
+
+            // Set columnDefs first, then defer rowData to next tick so AG Grid v32
+            // finishes its column-change cycle before receiving row data.
+            // Set columnDefs first, then defer rowData to next tick so AG Grid v32
+            // finishes its column-change cycle before receiving row data.
+            gridApi.setGridOption('columnDefs', colDefs);
+            var _data = content.data;
+            setTimeout(function() {
+                gridApi.setGridOption('rowData', _data);
+                gridApi.hideOverlay();
+            }, 0);
         }
-    });   
+    });
 }

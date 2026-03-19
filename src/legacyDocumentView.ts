@@ -2,7 +2,6 @@
 import { window, workspace, WebviewPanel, ExtensionContext, ViewColumn } from 'vscode';
 import { URI } from 'vscode-uri';
 import BaseDocumentView from './baseDocumentView';
-import { getLicenseKey } from './license';
 
 export default class LegacyDocumentView extends BaseDocumentView {
 
