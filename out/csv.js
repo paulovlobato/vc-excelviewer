@@ -269,7 +269,7 @@ function initPage() {
             if (e.finished) preserveState();
         },
         onSortChanged: function() { preserveState(); },
-        onFilterChanged: function() { preserveState(); },
+        onFilterChanged: function() { preserveState(); updateStatusBar(); },
         onBodyScrollEnd: function() { preserveState(); },
         onCellValueChanged: function(params) {
             if (!options.customEditor) return;
@@ -326,6 +326,8 @@ function initPage() {
 
     var container = document.getElementById('flex');
     gridApi = agGrid.createGrid(container, gridOptions);
+    initStatusBar();
+    initToolbar();
 }
 
 function parseContent(text) {
@@ -443,9 +445,66 @@ function parseContent(text) {
     return { data: data, bindings: bindings };
 }
 
+function initStatusBar() {
+    if (document.getElementById('status-bar')) return;
+    var bar = document.createElement('div');
+    bar.id = 'status-bar';
+    bar.textContent = '';
+    var flex = document.getElementById('flex');
+    flex.parentNode.insertBefore(bar, flex.nextSibling);
+}
+
+function updateStatusBar() {
+    var bar = document.getElementById('status-bar');
+    if (!bar || !gridApi) return;
+    var displayed = 0;
+    gridApi.forEachNodeAfterFilter(function() { displayed++; });
+    var total = sourceData.length;
+    bar.textContent = displayed === total
+        ? total + ' rows'
+        : 'Showing ' + displayed + ' of ' + total + ' rows';
+}
+
+function initToolbar() {
+    if (document.getElementById('toolbar')) return;
+    var toolbar = document.createElement('div');
+    toolbar.id = 'toolbar';
+    // Insert between #flex and #status-bar (status-bar is already in DOM)
+    var statusBar = document.getElementById('status-bar');
+    var flex = document.getElementById('flex');
+    flex.parentNode.insertBefore(toolbar, statusBar || flex.nextSibling);
+
+    var btnReset = document.createElement('button');
+    btnReset.id = 'btn-reset-filters';
+    btnReset.textContent = 'Reset Filters';
+    btnReset.title = 'Clear all active filters';
+    btnReset.addEventListener('click', function() {
+        if (gridApi) {
+            gridApi.setFilterModel(null);
+            updateStatusBar();
+        }
+    });
+    toolbar.appendChild(btnReset);
+
+    var btnExport = document.createElement('button');
+    btnExport.id = 'btn-export';
+    btnExport.textContent = 'Export CSV';
+    btnExport.title = 'Export visible rows to CSV';
+    btnExport.addEventListener('click', function() {
+        if (gridApi) gridApi.exportDataAsCsv();
+    });
+    toolbar.appendChild(btnExport);
+}
+
 function resizeGrid() {
     var div = document.getElementById('flex');
-    div.style.height = window.innerHeight.toString() + "px";
+    if (!div) return;
+    var used = 0;
+    ['toolbar', 'status-bar'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) used += el.offsetHeight;
+    });
+    div.style.height = (window.innerHeight - used) + 'px';
 }
 
 function handleEvents() {
@@ -531,6 +590,9 @@ function handleEvents() {
             setTimeout(function() {
                 gridApi.setGridOption('rowData', _data);
                 gridApi.hideOverlay();
+                initStatusBar();
+                resizeGrid();
+                updateStatusBar();
             }, 0);
         }
     });
