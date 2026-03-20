@@ -1,6 +1,141 @@
 var sendMessage;
 var gridApi;
 var sourceData = [];
+var MAX_UNIQUE = 500;
+
+function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function CombinedFilter() {}
+
+CombinedFilter.prototype.init = function(params) {
+    this.params = params;
+    this.field = params.colDef.field;
+    this.textValue = '';
+    // AG Grid spreads filterParams into params directly, so values is at params.values
+    this.allValues = params.values || (params.filterParams && params.filterParams.values) || [];
+    this.checkedValues = new Set(this.allValues);
+
+    this.eGui = document.createElement('div');
+    this.eGui.style.cssText = 'padding:8px;min-width:200px;max-width:300px;font-size:12px;';
+    this.eGui.innerHTML =
+        '<div style="margin-bottom:6px;">' +
+            '<input type="text" placeholder="Contains..." style="width:100%;box-sizing:border-box;' +
+            'padding:4px 6px;background:var(--vscode-input-background);' +
+            'color:var(--vscode-input-foreground);border:1px solid var(--vscode-input-border);"/>' +
+        '</div>' +
+        '<div id="caSetSection" style="border-top:1px solid var(--vscode-editorWidget-border);padding-top:6px;">' +
+            '<div style="margin-bottom:4px;">' +
+                '<label style="cursor:pointer;display:flex;align-items:center;gap:4px;">' +
+                    '<input type="checkbox" id="caSelectAll" checked> <span>(Select All)</span>' +
+                '</label>' +
+            '</div>' +
+            '<div id="caValuesList" style="max-height:180px;overflow-y:auto;"></div>' +
+        '</div>';
+
+    this.textInput = this.eGui.querySelector('input[type="text"]');
+    this.selectAllEl = this.eGui.querySelector('#caSelectAll');
+    this.valuesListEl = this.eGui.querySelector('#caValuesList');
+    this.setSectionEl = this.eGui.querySelector('#caSetSection');
+    this.visibleValues = this.allValues.slice();
+    this.tooManyValues = this.allValues.length > MAX_UNIQUE;
+
+    var self = this;
+    this.textInput.addEventListener('input', function() {
+        self.textValue = self.textInput.value;
+        self.renderValues();
+        self.params.filterChangedCallback();
+    });
+    this.selectAllEl.addEventListener('change', function() {
+        var nowChecked = self.selectAllEl.checked;
+        self.visibleValues.forEach(function(v) {
+            if (nowChecked) { self.checkedValues.add(v); }
+            else { self.checkedValues.delete(v); }
+        });
+        // Update existing checkboxes in-place without rebuilding the list
+        var cbs = self.valuesListEl.querySelectorAll('input[type="checkbox"]');
+        cbs.forEach(function(cb) { cb.checked = nowChecked; });
+        self.selectAllEl.indeterminate = false;
+        self.params.filterChangedCallback();
+    });
+
+    this.renderValues();
+};
+
+CombinedFilter.prototype.renderValues = function() {
+    var self = this;
+    if (this.tooManyValues) {
+        this.setSectionEl.innerHTML =
+            '<span style="color:var(--vscode-descriptionForeground);font-style:italic;">' +
+            '(' + this.allValues.length + ' unique values \u2014 use text filter above)</span>';
+        return;
+    }
+    var q = this.textValue.toLowerCase();
+    this.visibleValues = q
+        ? this.allValues.filter(function(v) { return v.toLowerCase().indexOf(q) !== -1; })
+        : this.allValues.slice();
+
+    this.valuesListEl.innerHTML = '';
+    this.visibleValues.forEach(function(val) {
+        var div = document.createElement('div');
+        var checked = self.checkedValues.has(val) ? ' checked' : '';
+        var display = val === '' ? '(blank)' : escapeHtml(val);
+        div.innerHTML = '<label style="cursor:pointer;display:flex;align-items:center;gap:4px;">' +
+            '<input type="checkbox"' + checked + '> <span>' + display + '</span></label>';
+        var cb = div.querySelector('input');
+        cb.addEventListener('change', function() {
+            if (cb.checked) { self.checkedValues.add(val); }
+            else { self.checkedValues.delete(val); }
+            self.syncSelectAll();
+            self.params.filterChangedCallback();
+        });
+        self.valuesListEl.appendChild(div);
+    });
+    this.syncSelectAll();
+};
+
+CombinedFilter.prototype.syncSelectAll = function() {
+    if (this.tooManyValues) return;
+    var allChecked = this.visibleValues.length > 0 &&
+        this.visibleValues.every(function(v) { return this.checkedValues.has(v); }, this);
+    var noneChecked = this.visibleValues.every(function(v) { return !this.checkedValues.has(v); }, this);
+    this.selectAllEl.checked = allChecked;
+    this.selectAllEl.indeterminate = !allChecked && !noneChecked;
+};
+
+CombinedFilter.prototype.getGui = function() { return this.eGui; };
+
+CombinedFilter.prototype.isFilterActive = function() {
+    if (this.textValue) return true;
+    if (!this.tooManyValues && this.checkedValues.size < this.allValues.length) return true;
+    return false;
+};
+
+CombinedFilter.prototype.doesFilterPass = function(params) {
+    var raw = params.data[this.field];
+    var val = raw !== null && raw !== undefined ? String(raw) : '';
+    if (this.textValue && val.toLowerCase().indexOf(this.textValue.toLowerCase()) === -1) return false;
+    if (!this.tooManyValues && this.checkedValues.size < this.allValues.length && !this.checkedValues.has(val)) return false;
+    return true;
+};
+
+CombinedFilter.prototype.getModel = function() {
+    if (!this.isFilterActive()) return null;
+    return { textValue: this.textValue, checkedValues: Array.from(this.checkedValues) };
+};
+
+CombinedFilter.prototype.setModel = function(model) {
+    if (model) {
+        this.textValue = model.textValue || '';
+        this.checkedValues = new Set(model.checkedValues || this.allValues);
+    } else {
+        this.textValue = '';
+        this.checkedValues = new Set(this.allValues);
+    }
+    if (this.textInput) this.textInput.value = this.textValue;
+    if (this.valuesListEl) this.renderValues();
+};
 
 function initPage() {
     const vscode = acquireVsCodeApi();
@@ -345,6 +480,19 @@ function handleEvents() {
                 });
             }
 
+            // Pre-compute unique values per column (O(N×C)) for the set filter
+            var uniqueMap = {};
+            content.bindings.forEach(function(b) { uniqueMap[b.binding] = new Set(); });
+            content.data.forEach(function(row) {
+                content.bindings.forEach(function(b) {
+                    var v = row[b.binding];
+                    uniqueMap[b.binding].add(v !== null && v !== undefined ? String(v) : '');
+                });
+            });
+            content.bindings.forEach(function(b) {
+                uniqueMap[b.binding] = Array.from(uniqueMap[b.binding]).sort();
+            });
+
             var opts = getOptions();
             content.bindings.forEach(function(b) {
                 var headerName = opts.capitalizeHeaders
@@ -353,7 +501,8 @@ function handleEvents() {
                 var colDef = {
                     field: b.binding,
                     headerName: headerName,
-                    filter: true,
+                    filter: CombinedFilter,
+                    filterParams: { values: uniqueMap[b.binding] },
                     resizable: true,
                     sortable: true,
                     suppressMovable: true
@@ -375,8 +524,6 @@ function handleEvents() {
                 colDefs.push(colDef);
             });
 
-            // Set columnDefs first, then defer rowData to next tick so AG Grid v32
-            // finishes its column-change cycle before receiving row data.
             // Set columnDefs first, then defer rowData to next tick so AG Grid v32
             // finishes its column-change cycle before receiving row data.
             gridApi.setGridOption('columnDefs', colDefs);
