@@ -3,6 +3,11 @@ var gridApi;
 var sourceData = [];
 var MAX_UNIQUE = 500;
 
+// Find & highlight state
+var findQuery = '';
+var findMatches = [];
+var findCurrent = -1;
+
 function escapeHtml(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -137,6 +142,158 @@ CombinedFilter.prototype.setModel = function(model) {
     if (this.valuesListEl) this.renderValues();
 };
 
+// ── Find & Highlight cell renderer ────────────────────────────────────────────
+function HighlightCellRenderer() {}
+
+HighlightCellRenderer.prototype.init = function(params) {
+    this.eGui = document.createElement('span');
+    this.render(params);
+};
+
+HighlightCellRenderer.prototype.render = function(params) {
+    // Use the formatted value when available (respects valueFormatter)
+    var val = (params.valueFormatted !== undefined && params.valueFormatted !== null)
+        ? String(params.valueFormatted)
+        : (params.value !== null && params.value !== undefined ? String(params.value) : '');
+
+    if (!findQuery) {
+        this.eGui.textContent = val;
+        return;
+    }
+
+    var q = findQuery.toLowerCase();
+    var lower = val.toLowerCase();
+    var html = '';
+    var i = 0;
+    while (i < val.length) {
+        var idx = lower.indexOf(q, i);
+        if (idx === -1) { html += escapeHtml(val.slice(i)); break; }
+        html += escapeHtml(val.slice(i, idx));
+        html += '<mark class="find-highlight">' + escapeHtml(val.slice(idx, idx + q.length)) + '</mark>';
+        i = idx + q.length;
+    }
+    this.eGui.innerHTML = html;
+};
+
+HighlightCellRenderer.prototype.refresh = function(params) {
+    this.render(params);
+    return true;
+};
+
+HighlightCellRenderer.prototype.getGui = function() { return this.eGui; };
+
+// ── Find bar functions ─────────────────────────────────────────────────────────
+function initFindBar() {
+    if (document.getElementById('find-bar')) return;
+    var bar = document.createElement('div');
+    bar.id = 'find-bar';
+    bar.innerHTML =
+        '<input id="find-input" type="text" placeholder="Find in table…" autocomplete="off" spellcheck="false">' +
+        '<span id="find-count"></span>' +
+        '<button id="find-prev" title="Previous (Shift+Enter)">↑</button>' +
+        '<button id="find-next" title="Next (Enter)">↓</button>' +
+        '<button id="find-close" title="Close (Escape)">✕</button>';
+    document.body.appendChild(bar);
+
+    var input = document.getElementById('find-input');
+    input.addEventListener('input', function() {
+        findQuery = input.value;
+        updateFind();
+    });
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            navigateFind(e.shiftKey ? -1 : 1);
+        } else if (e.key === 'Escape') {
+            closeFindBar();
+        }
+    });
+    document.getElementById('find-prev').addEventListener('click', function() { navigateFind(-1); });
+    document.getElementById('find-next').addEventListener('click', function() { navigateFind(1); });
+    document.getElementById('find-close').addEventListener('click', closeFindBar);
+}
+
+function openFindBar() {
+    if (!document.getElementById('find-bar')) initFindBar();
+    var bar = document.getElementById('find-bar');
+    bar.classList.add('visible');
+    var input = document.getElementById('find-input');
+    input.focus();
+    input.select();
+}
+
+function closeFindBar() {
+    var bar = document.getElementById('find-bar');
+    if (bar) bar.classList.remove('visible');
+    findQuery = '';
+    findMatches = [];
+    findCurrent = -1;
+    var input = document.getElementById('find-input');
+    if (input) input.value = '';
+    if (gridApi) gridApi.refreshCells({ force: true });
+    updateFindCount();
+}
+
+function updateFind() {
+    findMatches = [];
+    findCurrent = -1;
+
+    if (findQuery && gridApi) {
+        var q = findQuery.toLowerCase();
+        var cols = (gridApi.getColumns() || []).filter(function(c) { return c.getColId() !== '__lineNum'; });
+
+        gridApi.forEachNodeAfterFilter(function(node) {
+            if (!node.data) return;
+            cols.forEach(function(col) {
+                var colId = col.getColId();
+                var val = node.data[colId];
+                var str = val !== null && val !== undefined ? String(val) : '';
+                if (str.toLowerCase().indexOf(q) !== -1) {
+                    findMatches.push({ node: node, colId: colId });
+                }
+            });
+        });
+
+        if (findMatches.length > 0) {
+            findCurrent = 0;
+            scrollToMatch(0);
+        }
+    }
+
+    if (gridApi) gridApi.refreshCells({ force: true });
+    updateFindCount();
+}
+
+function navigateFind(dir) {
+    if (!findMatches.length) return;
+    findCurrent = (findCurrent + dir + findMatches.length) % findMatches.length;
+    scrollToMatch(findCurrent);
+    updateFindCount();
+}
+
+function scrollToMatch(idx) {
+    if (!findMatches.length || !gridApi) return;
+    var m = findMatches[idx];
+    gridApi.ensureIndexVisible(m.node.rowIndex, 'middle');
+    gridApi.ensureColumnVisible(m.colId);
+    gridApi.flashCells({ rowNodes: [m.node], columns: [m.colId], flashDuration: 700 });
+}
+
+function updateFindCount() {
+    var el = document.getElementById('find-count');
+    if (!el) return;
+    if (!findQuery) {
+        el.textContent = '';
+        el.classList.remove('no-results');
+    } else if (findMatches.length === 0) {
+        el.textContent = 'No results';
+        el.classList.add('no-results');
+    } else {
+        el.textContent = (findCurrent + 1) + ' / ' + findMatches.length;
+        el.classList.remove('no-results');
+    }
+}
+
 function initPage() {
     const vscode = acquireVsCodeApi();
     const options = getOptions();
@@ -256,7 +413,8 @@ function initPage() {
             resizable: true,
             editable: options.customEditor,
             minWidth: 40,
-            suppressMovable: true
+            suppressMovable: true,
+            cellRenderer: HighlightCellRenderer
         },
         rowHeight: 28,
         rowBuffer: 20,
@@ -269,7 +427,7 @@ function initPage() {
             if (e.finished) preserveState();
         },
         onSortChanged: function() { preserveState(); },
-        onFilterChanged: function() { preserveState(); updateStatusBar(); },
+        onFilterChanged: function() { preserveState(); updateStatusBar(); updateFind(); },
         onBodyScrollEnd: function() { preserveState(); },
         onCellValueChanged: function(params) {
             if (!options.customEditor) return;
@@ -328,6 +486,15 @@ function initPage() {
     gridApi = agGrid.createGrid(container, gridOptions);
     initStatusBar();
     initToolbar();
+
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            e.preventDefault();
+            openFindBar();
+        } else if (e.key === 'Escape') {
+            closeFindBar();
+        }
+    });
 }
 
 function parseContent(text) {

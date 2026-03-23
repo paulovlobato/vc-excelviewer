@@ -28,7 +28,7 @@ export default abstract class BaseDocumentView {
         let panel = window.createWebviewPanel(this.viewType, title, viewColumn, {
             enableScripts: true,
             enableCommandUris: true,
-            enableFindWidget: true,
+            enableFindWidget: false,
             retainContextWhenHidden: true,
             localResourceRoots: [Uri.joinPath(this._extensionUri, 'out')]
         });

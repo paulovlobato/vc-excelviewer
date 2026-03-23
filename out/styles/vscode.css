@@ -259,3 +259,82 @@
 #btn-export:hover {
     background-color: var(--vscode-button-hoverBackground);
 }
+
+/* Find & Highlight bar */
+#find-bar {
+    display: none;
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 9999;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 8px;
+    background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+    border: 1px solid var(--vscode-editorWidget-border, var(--vscode-tree-indentGuidesStroke));
+    border-top: none;
+    border-right: none;
+    box-shadow: -2px 2px 6px rgba(0,0,0,0.25);
+    font-family: var(--vscode-font-family);
+    font-size: 12px;
+}
+
+#find-bar.visible {
+    display: flex;
+}
+
+#find-input {
+    width: 200px;
+    padding: 3px 6px;
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border, var(--vscode-tree-indentGuidesStroke));
+    outline: none;
+    font-size: 12px;
+    font-family: var(--vscode-font-family);
+    box-sizing: border-box;
+}
+
+#find-input:focus {
+    border-color: var(--vscode-focusBorder);
+}
+
+#find-count {
+    font-size: 11px;
+    min-width: 72px;
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+    white-space: nowrap;
+}
+
+#find-count.no-results {
+    color: var(--vscode-inputValidation-errorForeground, #f48771);
+}
+
+#find-prev,
+#find-next,
+#find-close {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--vscode-icon-foreground, var(--vscode-editor-foreground));
+    cursor: pointer;
+    padding: 2px 6px;
+    font-size: 13px;
+    line-height: 1;
+    border-radius: 3px;
+}
+
+#find-prev:hover,
+#find-next:hover,
+#find-close:hover {
+    background: var(--vscode-list-hoverBackground);
+    border-color: var(--vscode-tree-indentGuidesStroke);
+}
+
+/* Cell text highlight for matched characters */
+.find-highlight {
+    background-color: var(--vscode-editor-findMatchHighlightBackground, rgba(234,92,0,0.33));
+    color: inherit;
+    border-radius: 2px;
+    outline: 1px solid var(--vscode-editor-findMatchHighlightBorder, transparent);
+}
