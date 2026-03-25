@@ -8,6 +8,16 @@ var findQuery = '';
 var findMatches = [];
 var findCurrent = -1;
 
+// Exposed from initPage() so context menu and copy can call it
+var preserveStateFn = null;
+
+// Context menu element (module-level so keydown can hide it)
+var contextMenuEl = null;
+
+function hideContextMenu() {
+    if (contextMenuEl) contextMenuEl.style.display = 'none';
+}
+
 function escapeHtml(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -364,6 +374,7 @@ function initPage() {
         vscode.setState(state);
         vscode.postMessage({ save: true, state: state });
     }
+    preserveStateFn = preserveState;
 
     function applyState() {
         if (ignoreState()) return;
@@ -420,9 +431,11 @@ function initPage() {
         rowBuffer: 20,
         suppressScrollOnNewData: true,
         stopEditingWhenCellsLoseFocus: true,
+        // Editor mode: object API so we can disable click-to-select (clicks start editing instead)
+        // Viewer mode: legacy string form — no checkbox column, click selects rows
         rowSelection: options.customEditor
             ? { mode: 'multiRow', enableClickSelection: false }
-            : undefined,
+            : 'multiple',
         onColumnResized: function(e) {
             if (e.finished) preserveState();
         },
@@ -486,13 +499,20 @@ function initPage() {
     gridApi = agGrid.createGrid(container, gridOptions);
     initStatusBar();
     initToolbar();
+    initContextMenu();
 
     document.addEventListener('keydown', function(e) {
         if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
             e.preventDefault();
             openFindBar();
+        } else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+            if (gridApi) {
+                e.preventDefault();
+                copyRowsToClipboard();
+            }
         } else if (e.key === 'Escape') {
             closeFindBar();
+            hideContextMenu();
         }
     });
 }
@@ -661,6 +681,103 @@ function initToolbar() {
         if (gridApi) gridApi.exportDataAsCsv();
     });
     toolbar.appendChild(btnExport);
+}
+
+function initContextMenu() {
+    if (document.getElementById('col-context-menu')) return;
+    contextMenuEl = document.createElement('div');
+    contextMenuEl.id = 'col-context-menu';
+    document.body.appendChild(contextMenuEl);
+
+    function addItem(label, onClick) {
+        var item = document.createElement('div');
+        item.className = 'ctx-menu-item';
+        item.textContent = label;
+        item.addEventListener('click', function() {
+            onClick();
+            hideContextMenu();
+        });
+        contextMenuEl.appendChild(item);
+    }
+
+    document.addEventListener('contextmenu', function(e) {
+        var headerCell = e.target.closest && e.target.closest('.ag-header-cell');
+        if (!headerCell || !gridApi) { hideContextMenu(); return; }
+        var colId = headerCell.getAttribute('col-id');
+        if (!colId || colId === '__lineNum') { hideContextMenu(); return; }
+        e.preventDefault();
+
+        var col = gridApi.getColumn(colId);
+        var pinned = col ? col.getPinned() : null;
+        contextMenuEl.innerHTML = '';
+
+        if (pinned !== 'left') {
+            addItem('Pin Left', function() {
+                gridApi.applyColumnState({ state: [{ colId: colId, pinned: 'left' }] });
+                if (preserveStateFn) preserveStateFn();
+            });
+        }
+        if (pinned !== 'right') {
+            addItem('Pin Right', function() {
+                gridApi.applyColumnState({ state: [{ colId: colId, pinned: 'right' }] });
+                if (preserveStateFn) preserveStateFn();
+            });
+        }
+        if (pinned) {
+            addItem('Unpin', function() {
+                gridApi.applyColumnState({ state: [{ colId: colId, pinned: null }] });
+                if (preserveStateFn) preserveStateFn();
+            });
+        }
+
+        contextMenuEl.style.left = e.pageX + 'px';
+        contextMenuEl.style.top = e.pageY + 'px';
+        contextMenuEl.style.display = 'block';
+    });
+
+    document.addEventListener('click', function() { hideContextMenu(); });
+}
+
+function copyToClipboard(text, feedback) {
+    navigator.clipboard.writeText(text).then(function() {
+        var bar = document.getElementById('status-bar');
+        if (bar) {
+            bar.textContent = feedback;
+            setTimeout(updateStatusBar, 2000);
+        }
+    }).catch(function() {});
+}
+
+function copyRowsToClipboard() {
+    if (!gridApi) return;
+    var rows = gridApi.getSelectedRows();
+
+    if (!rows || !rows.length) {
+        // No rows selected — copy the focused cell value instead
+        var focused = gridApi.getFocusedCell();
+        if (!focused) return;
+        var node = gridApi.getDisplayedRowAtIndex(focused.rowIndex);
+        if (!node || !node.data) return;
+        var colId = focused.column.getColId();
+        var val = node.data[colId];
+        var str = val !== null && val !== undefined ? String(val) : '';
+        copyToClipboard(str, 'Cell copied to clipboard');
+        return;
+    }
+
+    var cols = (gridApi.getColumns() || []).filter(function(c) {
+        return c.getColId() !== '__lineNum';
+    });
+
+    // No header row — just the data values
+    var lines = rows.map(function(row) {
+        return cols.map(function(col) {
+            var v = row[col.getColId()];
+            return v !== null && v !== undefined ? String(v) : '';
+        }).join('\t');
+    });
+
+    copyToClipboard(lines.join('\n'), rows.length + ' row' + (rows.length !== 1 ? 's' : '') + ' copied to clipboard');
 }
 
 function resizeGrid() {

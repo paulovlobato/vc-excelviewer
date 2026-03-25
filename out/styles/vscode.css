@@ -338,3 +338,29 @@
     border-radius: 2px;
     outline: 1px solid var(--vscode-editor-findMatchHighlightBorder, transparent);
 }
+
+/* Column header right-click context menu */
+#col-context-menu {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    min-width: 130px;
+    background-color: var(--vscode-menu-background, var(--vscode-editor-background));
+    border: 1px solid var(--vscode-menu-border, var(--vscode-tree-indentGuidesStroke));
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    font-family: var(--vscode-font-family);
+    font-size: 12px;
+    padding: 2px 0;
+}
+
+.ctx-menu-item {
+    padding: 5px 16px;
+    cursor: pointer;
+    color: var(--vscode-menu-foreground, var(--vscode-editor-foreground));
+    white-space: nowrap;
+}
+
+.ctx-menu-item:hover {
+    background-color: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+    color: var(--vscode-menu-selectionForeground, var(--vscode-editor-foreground));
+}
