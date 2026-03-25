@@ -425,9 +425,11 @@ function initPage() {
             editable: options.customEditor,
             minWidth: 40,
             suppressMovable: true,
-            cellRenderer: HighlightCellRenderer
+            cellRenderer: HighlightCellRenderer,
+            wrapText: !!options.wrapText,
+            autoHeight: !!options.wrapText
         },
-        rowHeight: 28,
+        rowHeight: options.wrapText ? undefined : 28,
         rowBuffer: 20,
         suppressScrollOnNewData: true,
         stopEditingWhenCellsLoseFocus: true,
@@ -497,6 +499,14 @@ function initPage() {
 
     var container = document.getElementById('flex');
     gridApi = agGrid.createGrid(container, gridOptions);
+
+    // Apply theme override — 'auto' lets vscode.css handle it via --vscode-* variables
+    if (options.theme === 'light') {
+        document.body.classList.add('csv-theme-light');
+    } else if (options.theme === 'dark') {
+        document.body.classList.add('csv-theme-dark');
+    }
+
     initStatusBar();
     initToolbar();
     initContextMenu();

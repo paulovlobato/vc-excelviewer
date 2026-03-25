@@ -2,7 +2,7 @@
     "name": "csv-excel-viewer",
     "displayName": "CSV & Excel Viewer",
     "description": "Preview CSV files and Excel spreadsheets in Visual Studio Code using AG Grid Community and SheetJS — no license required.",
-    "version": "1.8.0",
+    "version": "1.8.2",
     "icon": "img/csv-excel-viewer.png",
     "publisher": "Development42",
     "license": "SEE LICENSE IN LICENSE.txt",
@@ -362,6 +362,17 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Specifies whether text piped to stdin is automatically opened as a CSV preview."
+                },
+                "csv-preview.wrapText": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Specifies whether cell text is wrapped and rows expand to fit their content."
+                },
+                "csv-preview.theme": {
+                    "type": "string",
+                    "enum": ["auto", "light", "dark"],
+                    "default": "auto",
+                    "description": "Controls the grid colour theme. 'auto' follows VS Code's current theme; 'light' and 'dark' force a specific palette regardless of the VS Code theme."
                 }
             }
         }

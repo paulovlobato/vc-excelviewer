@@ -78,7 +78,9 @@ export default class CsvDocumentView extends BaseDocumentView {
             uri: this.uri.toString(),
             previewUri: this.previewUri.toString(),
             state: this.state,
-            showInfo: <boolean>viewerConfig.get("showInfo")
+            showInfo: <boolean>viewerConfig.get("showInfo"),
+            wrapText: <boolean>config.get("wrapText"),
+            theme: <string>config.get("theme")
         };
 	}
 

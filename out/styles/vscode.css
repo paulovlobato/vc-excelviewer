@@ -1,4 +1,64 @@
-/* AG Grid - VS Code theme integration */
+/* ── Forced light palette (csv-preview.theme = "light") ──────────────────── */
+body.csv-theme-light .ag-theme-alpine {
+    --ag-background-color: #ffffff;
+    --ag-foreground-color: #1f1f1f;
+    --ag-header-background-color: #f3f3f3;
+    --ag-header-foreground-color: #1f1f1f;
+    --ag-odd-row-background-color: #fafafa;
+    --ag-row-hover-color: #e8e8e8;
+    --ag-selected-row-background-color: #cce5ff;
+    --ag-border-color: #d4d4d4;
+    --ag-row-border-color: #e8e8e8;
+    --ag-cell-horizontal-border: solid #e8e8e8;
+    --ag-header-column-separator-color: #d4d4d4;
+    --ag-input-background-color: #ffffff;
+    --ag-input-border-color: #c8c8c8;
+}
+body.csv-theme-light .ag-theme-alpine .ag-root-wrapper,
+body.csv-theme-light .ag-theme-alpine .ag-root,
+body.csv-theme-light .ag-theme-alpine .ag-body-viewport,
+body.csv-theme-light .ag-theme-alpine .ag-center-cols-viewport,
+body.csv-theme-light .ag-theme-alpine .ag-center-cols-container,
+body.csv-theme-light .ag-theme-alpine .ag-pinned-left-cols-container,
+body.csv-theme-light .ag-theme-alpine .ag-pinned-right-cols-container,
+body.csv-theme-light .ag-theme-alpine .ag-full-width-container { background-color: #ffffff !important; }
+body.csv-theme-light .ag-theme-alpine .ag-cell { color: #1f1f1f !important; border-right-color: #e8e8e8 !important; }
+body.csv-theme-light .ag-theme-alpine .ag-row-odd { background-color: #fafafa !important; color: #1f1f1f !important; }
+body.csv-theme-light .ag-theme-alpine .ag-row-selected .ag-cell { background-color: #cce5ff !important; color: #1f1f1f !important; }
+body.csv-theme-light #toolbar,
+body.csv-theme-light #status-bar { background-color: #f3f3f3 !important; border-color: #d4d4d4 !important; color: #1f1f1f !important; }
+
+/* ── Forced dark palette (csv-preview.theme = "dark") ────────────────────── */
+body.csv-theme-dark .ag-theme-alpine {
+    --ag-background-color: #1e1e1e;
+    --ag-foreground-color: #d4d4d4;
+    --ag-header-background-color: #252526;
+    --ag-header-foreground-color: #cccccc;
+    --ag-odd-row-background-color: #1a1a1a;
+    --ag-row-hover-color: #2a2d2e;
+    --ag-selected-row-background-color: #094771;
+    --ag-border-color: #3c3c3c;
+    --ag-row-border-color: #2d2d2d;
+    --ag-cell-horizontal-border: solid #2d2d2d;
+    --ag-header-column-separator-color: #3c3c3c;
+    --ag-input-background-color: #3c3c3c;
+    --ag-input-border-color: #555555;
+}
+body.csv-theme-dark .ag-theme-alpine .ag-root-wrapper,
+body.csv-theme-dark .ag-theme-alpine .ag-root,
+body.csv-theme-dark .ag-theme-alpine .ag-body-viewport,
+body.csv-theme-dark .ag-theme-alpine .ag-center-cols-viewport,
+body.csv-theme-dark .ag-theme-alpine .ag-center-cols-container,
+body.csv-theme-dark .ag-theme-alpine .ag-pinned-left-cols-container,
+body.csv-theme-dark .ag-theme-alpine .ag-pinned-right-cols-container,
+body.csv-theme-dark .ag-theme-alpine .ag-full-width-container { background-color: #1e1e1e !important; }
+body.csv-theme-dark .ag-theme-alpine .ag-cell { color: #d4d4d4 !important; border-right-color: #2d2d2d !important; }
+body.csv-theme-dark .ag-theme-alpine .ag-row-odd { background-color: #1a1a1a !important; color: #d4d4d4 !important; }
+body.csv-theme-dark .ag-theme-alpine .ag-row-selected .ag-cell { background-color: #094771 !important; color: #ffffff !important; }
+body.csv-theme-dark #toolbar,
+body.csv-theme-dark #status-bar { background-color: #252526 !important; border-color: #3c3c3c !important; color: #d4d4d4 !important; }
+
+/* ── Auto (default): follows VS Code's active theme via --vscode-* variables ─ */
 .ag-theme-alpine {
     --ag-background-color: var(--vscode-editor-background);
     --ag-foreground-color: var(--vscode-editor-foreground);
