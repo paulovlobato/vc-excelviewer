@@ -14,6 +14,9 @@ var preserveStateFn = null;
 // Context menu element (module-level so keydown can hide it)
 var contextMenuEl = null;
 
+// Defensive timeout — hides overlay if content never arrives
+var _hideTimer = null;
+
 function hideContextMenu() {
     if (contextMenuEl) contextMenuEl.style.display = 'none';
 }
@@ -435,9 +438,7 @@ function initPage() {
         stopEditingWhenCellsLoseFocus: true,
         // Editor mode: object API so we can disable click-to-select (clicks start editing instead)
         // Viewer mode: legacy string form — no checkbox column, click selects rows
-        rowSelection: options.customEditor
-            ? { mode: 'multiRow', enableClickSelection: false }
-            : 'multiple',
+        rowSelection: 'multiple',
         onColumnResized: function(e) {
             if (e.finished) preserveState();
         },
@@ -493,6 +494,7 @@ function initPage() {
             applyState();
         },
         onGridReady: function() {
+            _hideTimer = setTimeout(function() { if (gridApi) gridApi.hideOverlay(); }, 5000);
             vscode.postMessage({ refresh: true });
         }
     };
@@ -804,6 +806,7 @@ function resizeGrid() {
 function handleEvents() {
     window.addEventListener("message", function(event) {
         if (event.data.refresh) {
+            clearTimeout(_hideTimer);
             var content = parseContent(event.data.content);
             sourceData = content.data;
 

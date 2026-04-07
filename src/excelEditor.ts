@@ -9,14 +9,14 @@ export class ExcelEditorProvider implements vscode.CustomEditorProvider<ExcelDoc
 		const provider = new ExcelEditorProvider(context);
 		const providerRegistration = vscode.window.registerCustomEditorProvider(ExcelEditorProvider.viewType, provider, {
 			webviewOptions: {
-				enableFindWidget: true,
+				enableFindWidget: false,
 				retainContextWhenHidden: true
 			}
 		});
 		return providerRegistration;
 	}
 
-	private static readonly viewType = 'gc-excelviewer-excel-editor';
+	private static readonly viewType = 'csv-excel-viewer-excel-editor';
 
 	constructor(private readonly context: vscode.ExtensionContext) {
 	}

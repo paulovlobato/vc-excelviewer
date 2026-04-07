@@ -7,14 +7,14 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
 		const provider = new CsvEditorProvider(context);
 		const providerRegistration = vscode.window.registerCustomEditorProvider(CsvEditorProvider.viewType, provider, {
 			webviewOptions: {
-				enableFindWidget: true,
+				enableFindWidget: false,
 				retainContextWhenHidden: true
 			}
 		});
 		return providerRegistration;
 	}
 
-	private static readonly viewType = 'gc-excelviewer-csv-editor';
+	private static readonly viewType = 'csv-excel-viewer-csv-editor';
 
 	constructor(private readonly context: vscode.ExtensionContext) {
 	}

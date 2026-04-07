@@ -82,8 +82,8 @@ export function activate(context: ExtensionContext) {
     // Register serializers for persistent settings
     window.registerWebviewPanelSerializer("gc-excelviewer-csv", new LegacySerializer(context));
     window.registerWebviewPanelSerializer("gc-excelviewer-excel", new LegacySerializer(context));
-    window.registerWebviewPanelSerializer("gc-excelviewer-csv-preview", new CsvSerializer(context));
-    window.registerWebviewPanelSerializer("gc-excelviewer-excel-preview", new ExcelSerializer(context));
+    window.registerWebviewPanelSerializer("csv-excel-viewer-csv-preview", new CsvSerializer(context));
+    window.registerWebviewPanelSerializer("csv-excel-viewer-excel-preview", new ExcelSerializer(context));
 
     // Reset all previews when the configuration changes
     workspace.onDidChangeConfiguration(() => {
