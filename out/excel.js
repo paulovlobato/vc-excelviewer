@@ -16,6 +16,17 @@ function getBinding(n) {
     }
 }
 
+function isNumericColumn(values) {
+    var nonEmpty = values.filter(function(v) {
+        return v !== null && v !== undefined && v !== '';
+    });
+    if (nonEmpty.length === 0) return false;
+    return nonEmpty.every(function(v) {
+        return typeof v === 'number' ||
+               (typeof v === 'string' && v.trim() !== '' && isFinite(Number(v)));
+    });
+}
+
 function sheetToGridData(ws) {
     if (!ws) return { colDefs: [], rowData: [] };
     var aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
@@ -24,9 +35,18 @@ function sheetToGridData(ws) {
     var colCount = 0;
     aoa.forEach(function(row) { if (row.length > colCount) colCount = row.length; });
 
+    // Build rowData first so detection can scan column values
+    var rowData = aoa.map(function(row) {
+        var obj = {};
+        for (var c = 0; c < colCount; c++) {
+            obj[getBinding(c)] = row[c] !== undefined ? row[c] : '';
+        }
+        return obj;
+    });
+
     var colDefs = [];
     for (var c = 0; c < colCount; c++) {
-        colDefs.push({
+        var colDef = {
             field: getBinding(c),
             headerName: getBinding(c),
             sortable: true,
@@ -35,16 +55,13 @@ function sheetToGridData(ws) {
             editable: true,
             minWidth: 40,
             suppressMovable: false
-        });
-    }
-
-    var rowData = aoa.map(function(row) {
-        var obj = {};
-        for (var c = 0; c < colCount; c++) {
-            obj[getBinding(c)] = row[c] !== undefined ? row[c] : '';
+        };
+        var colValues = rowData.map(function(row) { return row[getBinding(c)]; });
+        if (isNumericColumn(colValues)) {
+            colDef.comparator = function(a, b) { return Number(a) - Number(b); };
         }
-        return obj;
-    });
+        colDefs.push(colDef);
+    }
 
     return { colDefs: colDefs, rowData: rowData };
 }
