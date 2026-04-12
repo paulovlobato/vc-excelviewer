@@ -25,6 +25,17 @@ function escapeHtml(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function isNumericColumn(values) {
+    var nonEmpty = values.filter(function(v) {
+        return v !== null && v !== undefined && v !== '';
+    });
+    if (nonEmpty.length === 0) return false;
+    return nonEmpty.every(function(v) {
+        return typeof v === 'number' ||
+               (typeof v === 'string' && v.trim() !== '' && isFinite(Number(v)));
+    });
+}
+
 function CombinedFilter() {}
 
 CombinedFilter.prototype.init = function(params) {
@@ -877,6 +888,10 @@ function handleEvents() {
                         }
                         return params.value;
                     };
+                }
+                var colValues = content.data.map(function(row) { return row[b.binding]; });
+                if (isNumericColumn(colValues)) {
+                    colDef.comparator = function(a, b) { return Number(a) - Number(b); };
                 }
                 colDefs.push(colDef);
             });
