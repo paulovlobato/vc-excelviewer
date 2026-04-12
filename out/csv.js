@@ -427,6 +427,7 @@ function initPage() {
             resizable: true,
             editable: options.customEditor,
             minWidth: 40,
+            maxWidth: options.maxColumnWidth != null ? options.maxColumnWidth : 300,
             suppressMovable: true,
             cellRenderer: HighlightCellRenderer,
             wrapText: !!options.wrapText,
