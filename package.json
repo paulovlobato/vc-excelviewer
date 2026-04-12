@@ -326,6 +326,7 @@
                 "csv-preview.maxColumnWidth": {
                     "type": "number",
                     "default": 300,
+                    "minimum": 1,
                     "description": "Maximum column width in pixels when auto-sizing columns."
                 },
                 "csv-preview.lineNumbers": {
