@@ -2,7 +2,7 @@
     "name": "csv-excel-viewer",
     "displayName": "CSV & Excel Viewer",
     "description": "Preview CSV files and Excel spreadsheets in Visual Studio Code using AG Grid Community and SheetJS — no license required.",
-    "version": "1.8.3",
+    "version": "1.8.4",
     "icon": "img/csv-excel-viewer.png",
     "publisher": "Development42",
     "license": "SEE LICENSE IN LICENSE.txt",
