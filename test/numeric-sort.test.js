@@ -1,7 +1,9 @@
 // test/numeric-sort.test.js
 import { test, expect, describe } from "bun:test";
 
-// Copy of the function under test (same code that will go in csv.js / excel.js)
+// Copy of the function under test (same code that will go in csv.js / excel.js).
+// out/csv.js and out/excel.js are browser webview files with no exports — they
+// cannot be imported as modules, so the function is duplicated here intentionally.
 function isNumericColumn(values) {
     var nonEmpty = values.filter(function(v) {
         return v !== null && v !== undefined && v !== '';
@@ -46,12 +48,16 @@ describe('isNumericColumn', function() {
         expect(isNumericColumn(['foo', 'bar'])).toBe(false);
     });
 
-    test('all empty → false', function() {
+    test('all empty strings → false', function() {
         expect(isNumericColumn(['', '', ''])).toBe(false);
     });
 
     test('empty array → false', function() {
         expect(isNumericColumn([])).toBe(false);
+    });
+
+    test('all null/undefined → false', function() {
+        expect(isNumericColumn([null, undefined, null])).toBe(false);
     });
 
     test('null and undefined excluded, rest numeric → true', function() {
@@ -73,8 +79,10 @@ describe('isNumericColumn', function() {
     test('whitespace-only string → false', function() {
         expect(isNumericColumn(['   ', '1'])).toBe(false);
     });
+});
 
-    test('numeric comparator sorts correctly', function() {
+describe('numeric sort comparator', function() {
+    test('sorts numeric strings in numeric order', function() {
         var data = ['10', '2', '1', '20'];
         data.sort(function(a, b) { return Number(a) - Number(b); });
         expect(data).toEqual(['1', '2', '10', '20']);
