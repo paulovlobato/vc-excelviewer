@@ -69,6 +69,7 @@ export default class CsvDocumentView extends BaseDocumentView {
             hasHeaders: <boolean>config.get("hasHeaders"),
             capitalizeHeaders: <boolean>config.get("capitalizeHeaders"),
             resizeColumns: <string>config.get("resizeColumns"),
+            maxColumnWidth: <number>config.get("maxColumnWidth"),
             lineNumbers: <string>config.get("lineNumbers"),
             commentCharacter: <string>config.get("commentCharacter"),
             skipComments: <boolean>config.get("skipComments"),
