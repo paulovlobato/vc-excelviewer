@@ -320,8 +320,13 @@
                         "first",
                         "none"
                     ],
-                    "default": "none",
+                    "default": "all",
                     "description": "Specifies whether columns are automatically resized to fit the data for CSV files."
+                },
+                "csv-preview.maxColumnWidth": {
+                    "type": "number",
+                    "default": 300,
+                    "description": "Maximum column width in pixels when auto-sizing columns."
                 },
                 "csv-preview.lineNumbers": {
                     "type": "string",
