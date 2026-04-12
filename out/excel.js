@@ -58,7 +58,7 @@ function sheetToGridData(ws) {
         };
         var colValues = rowData.map(function(row) { return row[getBinding(c)]; });
         if (isNumericColumn(colValues)) {
-            colDef.comparator = function(a, b) { return Number(a) - Number(b); };
+            colDef.comparator = function(valA, valB) { return Number(valA) - Number(valB); };
         }
         colDefs.push(colDef);
     }

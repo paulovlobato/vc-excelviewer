@@ -891,7 +891,7 @@ function handleEvents() {
                 }
                 var colValues = content.data.map(function(row) { return row[b.binding]; });
                 if (isNumericColumn(colValues)) {
-                    colDef.comparator = function(a, b) { return Number(a) - Number(b); };
+                    colDef.comparator = function(valA, valB) { return Number(valA) - Number(valB); };
                 }
                 colDefs.push(colDef);
             });
