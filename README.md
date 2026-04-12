@@ -25,12 +25,16 @@ Open any `.xlsx` or `.xlsm` file. The custom editor opens automatically. Use the
 | `csv-preview.quoteMark` | `"` | Quote character for cell values |
 | `csv-preview.hasHeaders` | `true` | Treat first row as column headers |
 | `csv-preview.capitalizeHeaders` | `true` | Capitalize header names |
-| `csv-preview.resizeColumns` | `none` | Auto-resize columns: `all`, `first`, or `none` |
+| `csv-preview.resizeColumns` | `all` | Auto-resize columns: `all`, `first`, or `none` |
+| `csv-preview.maxColumnWidth` | `300` | Maximum column width in pixels when auto-sizing |
 | `csv-preview.lineNumbers` | `none` | Show line numbers: `ordinal`, `source`, or `none` |
 | `csv-preview.commentCharacter` | `#` | Character that marks comment lines |
 | `csv-preview.skipComments` | `false` | Omit comment lines from the preview |
 | `csv-preview.formatValues` | `never` | Apply number formatting: `always`, `unquoted`, or `never` |
 | `csv-preview.numberFormat` | `g6` | [.NET-style format string](https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-numeric-format-strings) for numeric columns |
+| `csv-preview.wrapText` | `false` | Wrap cell text and expand rows to fit content |
+| `csv-preview.theme` | `auto` | Grid color theme: `auto`, `light`, or `dark` |
+| `csv-preview.openStdin` | `false` | Auto-open text piped to stdin as a CSV preview |
 | `excel-viewer.showInfo` | `true` | Show info bar at the bottom of the preview |
 
 ## License
