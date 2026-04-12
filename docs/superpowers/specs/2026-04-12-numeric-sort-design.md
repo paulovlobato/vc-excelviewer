@@ -34,14 +34,15 @@ function isNumericColumn(values) {
     if (nonEmpty.length === 0) return false;
     return nonEmpty.every(function(v) {
         return typeof v === 'number' ||
-               (typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v)));
+               (typeof v === 'string' && v.trim() !== '' && isFinite(Number(v)));
     });
 }
 ```
 
-- Empty cells excluded from detection
+- Empty cells excluded from detection (note: `Number("")` returns `0` not `NaN`, so the `v !== ''` guard is load-bearing)
 - Returns `false` for all-empty columns (no comparator added)
 - Accepts both JS `number` type and numeric strings
+- Uses `isFinite()` instead of `!isNaN()` to exclude `"Infinity"` and `"-Infinity"` from numeric detection — these are not useful numeric sort values
 
 ### Comparator
 
@@ -68,14 +69,24 @@ CSV stores values as strings when `formatValues` is off, so `Number()` coercion 
 
 ### Excel (`out/excel.js`)
 
-In `sheetToGridData`, after building `rowData`, detect each column and attach comparator:
+In `sheetToGridData`, detection runs inside the existing `for (var c = 0; c < colCount; c++)` loop, after the colDef is pushed, so `colDefs[c]` is valid:
 
 ```js
-var colValues = rowData.map(function(row) { return row[getBinding(c)]; });
-if (isNumericColumn(colValues)) {
-    colDefs[c].comparator = function(a, b) { return Number(a) - Number(b); };
+for (var c = 0; c < colCount; c++) {
+    var colDef = {
+        field: getBinding(c),
+        // ... existing properties ...
+    };
+    colDefs.push(colDef);
+    // rowData is already built above this loop
+    var colValues = rowData.map(function(row) { return row[getBinding(c)]; });
+    if (isNumericColumn(colValues)) {
+        colDef.comparator = function(a, b) { return Number(a) - Number(b); };
+    }
 }
 ```
+
+**Note on `var` loop capture:** `colValues` closes over `c` via `getBinding(c)`. Since `var` is function-scoped, `c` inside `rowData.map` will be the value at the time the callback executes — which is fine here because `map` runs synchronously. The `comparator` function does not close over `c` at all (it only uses `a` and `b`), so there is no capture issue.
 
 SheetJS returns native JS `number` for numeric cells — detection handles both cases.
 
@@ -95,4 +106,6 @@ SheetJS returns native JS `number` for numeric cells — detection handles both 
 | Integers stored as strings (`"42"`) | Detected as numeric, sorted correctly |
 | Floats (`"3.14"`) | Detected as numeric, sorted correctly |
 | Negative numbers (`"-5"`) | Detected as numeric, sorted correctly |
-| Scientific notation (`"1e3"`) | `!isNaN(Number("1e3"))` → `true`, detected as numeric |
+| Scientific notation (`"1e3"`) | `isFinite(Number("1e3"))` → `true`, detected as numeric |
+| `"Infinity"` / `"-Infinity"` | `isFinite(Number("Infinity"))` → `false`, treated as string |
+| Empty string `""` | Excluded by `v !== ''` guard before `Number()` coercion (`Number("")` = 0) |
