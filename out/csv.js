@@ -472,18 +472,6 @@ function initPage() {
             preserveState();
         } : undefined,
         onRowDataUpdated: function() {
-            var resize = options.resizeColumns;
-            if (resize === 'all') {
-                setTimeout(function() { gridApi.autoSizeAllColumns(); }, 0);
-            } else if (resize === 'first') {
-                setTimeout(function() {
-                    var cols = gridApi.getColumns();
-                    if (cols && cols.length > 0) {
-                        var first = lineNumColDef ? cols[1] : cols[0];
-                        if (first) gridApi.autoSizeColumns([first.getId()]);
-                    }
-                }, 0);
-            }
             // Do NOT call applyState() here — applying a stale stored filter model
             // immediately after setGridOption('rowData') would hide all rows.
             // applyState() is called in onFirstDataRendered instead.
@@ -493,6 +481,18 @@ function initPage() {
             // Apply saved column/filter state only after the first rows are actually
             // painted — prevents stale filter models from immediately hiding all rows.
             applyState();
+            // Auto-size AFTER applyState so we always win over any saved uniform widths.
+            // At this point rows are in the DOM, so AG Grid can measure text widths correctly.
+            var resize = options.resizeColumns;
+            if (resize === 'all') {
+                gridApi.autoSizeAllColumns();
+            } else if (resize === 'first') {
+                var cols = gridApi.getColumns();
+                if (cols && cols.length > 0) {
+                    var first = lineNumColDef ? cols[1] : cols[0];
+                    if (first) gridApi.autoSizeColumns([first.getId()]);
+                }
+            }
         },
         onGridReady: function() {
             _hideTimer = setTimeout(function() { if (gridApi) gridApi.hideOverlay(); }, 5000);
