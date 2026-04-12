@@ -1,5 +1,32 @@
 # Change Log
 
+## 1.8.5 (April 12, 2026)
+Numeric columns in CSV and Excel files now sort in numeric order (1, 2, 10, 20) instead of lexicographic order (1, 10, 2, 20). Detection is automatic: all-numeric columns get a numeric comparator; mixed columns fall back to string sort.
+
+## 1.8.4 (April 12, 2026)
+Added `csv-preview.maxColumnWidth` setting to cap the maximum width used when auto-sizing columns (default: 300px). Auto-sizing now runs after the first data render to avoid column widths being overridden by state restoration.
+
+## 1.8.3 (April 2026)
+Fixed never-ending loading spinner when opening CSV or Excel files via the custom editor.
+
+## 1.8.2 (April 2026)
+Added wrap text toggle and VS Code theme selector. Long cell values can now be wrapped instead of clipped.
+
+## 1.8.0 (April 2026)
+Added pin/freeze columns via right-click context menu (Pin Left, Pin Right, Unpin). Added copy-to-clipboard support for individual cells and selected rows.
+
+## 1.6.0 (April 2026)
+Added Find & Highlight (Ctrl+F) — search across all cells with match highlighting and navigation.
+
+## 1.1.0 (April 2026)
+Added export of filtered data to CSV via toolbar button. Added row count status bar showing "Showing X of Y rows" with live filter updates. Added set filter (unique values per column) with text search.
+
+## 1.0.1 (March 2026)
+Minor fixes post-rebranding.
+
+## 1.0.0 (March 2026)
+Replaced Wijmo with AG Grid Community v32 and SheetJS v0.18.5. Rebranded as csv-excel-viewer (publisher: Development42). All commercial library dependencies removed.
+
 ## 4.2.64 (August 15, 2025)
 Updated Wijmo license.
 
