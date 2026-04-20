@@ -522,7 +522,6 @@ function initPage() {
     }
 
     initStatusBar();
-    initToolbar();
     initContextMenu();
 
     document.addEventListener('keydown', function(e) {
@@ -676,36 +675,6 @@ function updateStatusBar() {
         : 'Showing ' + displayed + ' of ' + total + ' rows';
 }
 
-function initToolbar() {
-    if (document.getElementById('toolbar')) return;
-    var toolbar = document.createElement('div');
-    toolbar.id = 'toolbar';
-    // Insert between #flex and #status-bar (status-bar is already in DOM)
-    var statusBar = document.getElementById('status-bar');
-    var flex = document.getElementById('flex');
-    flex.parentNode.insertBefore(toolbar, statusBar || flex.nextSibling);
-
-    var btnReset = document.createElement('button');
-    btnReset.id = 'btn-reset-filters';
-    btnReset.textContent = 'Reset Filters';
-    btnReset.title = 'Clear all active filters';
-    btnReset.addEventListener('click', function() {
-        if (gridApi) {
-            gridApi.setFilterModel(null);
-            updateStatusBar();
-        }
-    });
-    toolbar.appendChild(btnReset);
-
-    var btnExport = document.createElement('button');
-    btnExport.id = 'btn-export';
-    btnExport.textContent = 'Export CSV';
-    btnExport.title = 'Export visible rows to CSV';
-    btnExport.addEventListener('click', function() {
-        if (gridApi) gridApi.exportDataAsCsv();
-    });
-    toolbar.appendChild(btnExport);
-}
 
 function initContextMenu() {
     if (document.getElementById('col-context-menu')) return;
