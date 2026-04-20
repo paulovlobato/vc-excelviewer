@@ -698,14 +698,18 @@ function initStatusBar() {
 }
 
 function updateStatusBar() {
-    var bar = document.getElementById('status-bar');
-    if (!bar || !gridApi) return;
+    var info = document.getElementById('status-info');
+    if (!info || !gridApi) return;
     var displayed = 0;
     gridApi.forEachNodeAfterFilter(function() { displayed++; });
     var total = sourceData.length;
-    bar.textContent = displayed === total
-        ? total + ' rows'
-        : 'Showing ' + displayed + ' of ' + total + ' rows';
+    var cols = (gridApi.getColumns() || []).filter(function(c) {
+        return c.getColId() !== '__lineNum';
+    }).length;
+    var rowText = displayed === total
+        ? total.toLocaleString() + ' rows'
+        : 'Showing ' + displayed.toLocaleString() + ' of ' + total.toLocaleString() + ' rows';
+    info.textContent = rowText + ' · ' + cols + ' cols';
 }
 
 
@@ -766,9 +770,9 @@ function initContextMenu() {
 
 function copyToClipboard(text, feedback) {
     navigator.clipboard.writeText(text).then(function() {
-        var bar = document.getElementById('status-bar');
-        if (bar) {
-            bar.textContent = feedback;
+        var info = document.getElementById('status-info');
+        if (info) {
+            info.textContent = feedback;
             setTimeout(updateStatusBar, 2000);
         }
     }).catch(function() {});
@@ -810,7 +814,7 @@ function resizeGrid() {
     var div = document.getElementById('flex');
     if (!div) return;
     var used = 0;
-    ['toolbar', 'status-bar'].forEach(function(id) {
+    ['status-bar'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) used += el.offsetHeight;
     });
