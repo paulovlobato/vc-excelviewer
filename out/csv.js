@@ -656,12 +656,45 @@ function parseContent(text) {
 }
 
 function initStatusBar() {
-    if (document.getElementById('status-bar')) return;
-    var bar = document.createElement('div');
+    if (document.getElementById('status-info')) return;
+    var bar = document.getElementById('status-bar') || document.createElement('div');
     bar.id = 'status-bar';
-    bar.textContent = '';
-    var flex = document.getElementById('flex');
-    flex.parentNode.insertBefore(bar, flex.nextSibling);
+    bar.innerHTML = '';
+
+    var info = document.createElement('span');
+    info.id = 'status-info';
+    bar.appendChild(info);
+
+    var actions = document.createElement('span');
+    actions.id = 'status-actions';
+
+    var btnReset = document.createElement('button');
+    btnReset.id = 'btn-reset';
+    btnReset.textContent = '⊘ Reset';
+    btnReset.title = 'Clear all active filters';
+    btnReset.addEventListener('click', function() {
+        if (gridApi) {
+            gridApi.setFilterModel(null);
+            updateStatusBar();
+        }
+    });
+    actions.appendChild(btnReset);
+
+    var btnExport = document.createElement('button');
+    btnExport.id = 'btn-export';
+    btnExport.textContent = '↓ Export';
+    btnExport.title = 'Export visible rows to CSV';
+    btnExport.addEventListener('click', function() {
+        if (gridApi) gridApi.exportDataAsCsv();
+    });
+    actions.appendChild(btnExport);
+
+    bar.appendChild(actions);
+
+    if (!bar.parentNode) {
+        var flex = document.getElementById('flex');
+        flex.parentNode.insertBefore(bar, flex.nextSibling);
+    }
 }
 
 function updateStatusBar() {
