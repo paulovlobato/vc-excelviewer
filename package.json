@@ -389,7 +389,6 @@
         "watch": "webpack --mode none --watch",
         "webpack": "webpack --mode development",
         "webpack-dev": "webpack --mode development --watch",
-        "postinstall": "node ./node_modules/vscode/bin/install",
         "compile-web": "webpack --config ./webpack.config.js",
         "watch-web": "webpack --watch --config ./webpack.config.js",
         "package-web": "webpack --mode production --devtool hidden-source-map --config ./webpack.config.js",
