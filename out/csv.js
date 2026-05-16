@@ -17,6 +17,17 @@ var contextMenuEl = null;
 // Defensive timeout — hides overlay if content never arrives
 var _hideTimer = null;
 
+function capColumnWidths(api, maxColumnWidth) {
+    var maxW = maxColumnWidth != null ? maxColumnWidth : 300;
+    var cols = api.getColumns();
+    if (!cols) return;
+    var updates = [];
+    cols.forEach(function(col) {
+        if (col.getActualWidth() > maxW) updates.push({ key: col.getId(), newWidth: maxW });
+    });
+    if (updates.length > 0) api.setColumnWidths(updates);
+}
+
 function hideContextMenu() {
     if (contextMenuEl) contextMenuEl.style.display = 'none';
 }
@@ -438,7 +449,6 @@ function initPage() {
             resizable: true,
             editable: options.customEditor,
             minWidth: 40,
-            maxWidth: options.maxColumnWidth != null ? options.maxColumnWidth : 300,
             suppressMovable: true,
             cellRenderer: HighlightCellRenderer,
             wrapText: !!options.wrapText,
@@ -497,11 +507,15 @@ function initPage() {
             var resize = options.resizeColumns;
             if (resize === 'all') {
                 gridApi.autoSizeAllColumns();
+                capColumnWidths(gridApi, options.maxColumnWidth);
             } else if (resize === 'first') {
                 var cols = gridApi.getColumns();
                 if (cols && cols.length > 0) {
                     var first = lineNumColDef ? cols[1] : cols[0];
-                    if (first) gridApi.autoSizeColumns([first.getId()]);
+                    if (first) {
+                        gridApi.autoSizeColumns([first.getId()]);
+                        capColumnWidths(gridApi, options.maxColumnWidth);
+                    }
                 }
             }
         },
