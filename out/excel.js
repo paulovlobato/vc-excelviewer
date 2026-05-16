@@ -6,6 +6,17 @@ var currentSheetIndex = 0;
 var undoStack = [];
 var redoStack = [];
 
+function capColumnWidths(api, maxColumnWidth) {
+    var maxW = maxColumnWidth != null ? maxColumnWidth : 300;
+    var cols = api.getColumns();
+    if (!cols) return;
+    var updates = [];
+    cols.forEach(function(col) {
+        if (col.getActualWidth() > maxW) updates.push({ key: col.getId(), newWidth: maxW });
+    });
+    if (updates.length > 0) api.setColumnWidths(updates);
+}
+
 function getBinding(n) {
     var h1 = Math.floor(n / 26);
     var h2 = n % 26;
@@ -124,7 +135,10 @@ function loadSheet(index) {
 
     updateTabs();
     setTimeout(function() {
-        if (result.colDefs.length > 0) gridApi.autoSizeAllColumns();
+        if (result.colDefs.length > 0) {
+            gridApi.autoSizeAllColumns();
+            capColumnWidths(gridApi, options.maxColumnWidth);
+        }
     }, 50);
 }
 
@@ -188,8 +202,7 @@ function initPage() {
             filter: true,
             resizable: true,
             editable: options.customEditor,
-            minWidth: 40,
-            maxWidth: options.maxColumnWidth != null ? options.maxColumnWidth : 300
+            minWidth: 40
         },
         rowHeight: 28,
         suppressScrollOnNewData: true,
