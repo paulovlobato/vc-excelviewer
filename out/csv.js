@@ -795,20 +795,28 @@ function copyToClipboard(text, feedback) {
 
 function copyRowsToClipboard() {
     if (!gridApi) return;
-    var rows = gridApi.getSelectedRows();
+    var rows = gridApi.getSelectedRows() || [];
+    var focused = gridApi.getFocusedCell();
 
-    if (!rows || !rows.length) {
-        // No rows selected — copy the focused cell value instead
-        var focused = gridApi.getFocusedCell();
-        if (!focused) return;
+    // Clicking any cell also selects its row (rowSelection: 'multiple'), so a
+    // non-empty selection alone doesn't mean the user wants whole rows. Copy
+    // rows only when several rows are selected, or when the line-number column
+    // (the row header) has focus; otherwise copy the focused cell.
+    var focusedColId = focused ? focused.column.getColId() : null;
+    var copyWholeRows = rows.length > 1 ||
+        (rows.length === 1 && focusedColId === '__lineNum');
+
+    if (focused && !copyWholeRows) {
         var node = gridApi.getDisplayedRowAtIndex(focused.rowIndex);
-        if (!node || !node.data) return;
-        var colId = focused.column.getColId();
-        var val = node.data[colId];
-        var str = val !== null && val !== undefined ? String(val) : '';
-        copyToClipboard(str, 'Cell copied to clipboard');
-        return;
+        if (node && node.data) {
+            var val = node.data[focusedColId];
+            var str = val !== null && val !== undefined ? String(val) : '';
+            copyToClipboard(str, 'Cell copied to clipboard');
+            return;
+        }
     }
+
+    if (!rows.length) return;
 
     var cols = (gridApi.getColumns() || []).filter(function(c) {
         return c.getColId() !== '__lineNum';
