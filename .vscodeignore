@@ -8,3 +8,13 @@ data/**
 webpack.config.json
 node_modules
 team-extension.log
+.claude/**
+.serena/**
+.superpowers/**
+.github/**
+.devcontainer/**
+docs/**
+test/**
+test-data.csv
+bun.lock
+package-lock.json
