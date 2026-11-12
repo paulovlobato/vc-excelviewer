@@ -1,5 +1,26 @@
 # Change Log
 
+## Unreleased
+
+- Fixed copying a single selected cell in the CSV viewer.
+- Excluded development-only files from the VSIX package.
+
+## 1.9.0 (June 16, 2026)
+
+- Fixed Excel viewer data rendering, where some workbooks showed column headers
+  but no data rows.
+- Added Shift+click multi-column sorting in the CSV and Excel viewers.
+
+## 1.8.9 (May 16, 2026)
+
+- `csv-preview.maxColumnWidth` now applies only to automatic column sizing;
+  columns resized manually are not capped.
+
+## 1.8.8 (April 20, 2026)
+
+- Moved preview actions from the grid toolbar into the bottom status bar.
+- Fixed copy-to-clipboard and grid resize behavior after the status bar rewrite.
+
 ## 1.8.5 (April 12, 2026)
 Numeric columns in CSV and Excel files now sort in numeric order (1, 2, 10, 20) instead of lexicographic order (1, 10, 2, 20). Detection is automatic: all-numeric columns get a numeric comparator; mixed columns fall back to string sort.
 
@@ -316,7 +337,7 @@ The extension no longer relies upon the Wijmo CDN for external file references. 
 
 When previewing a CSV file, the extension now validates any saved settings (column widths, sort/filter criteria) before applying them. If the number of columns or any individual column binding has changed, then any persistent user data is ignored. This fixes issues where newly added columns were not dislayed unless the `CSV: Clear Preview State` command was first run. This command is still useful for discarding persistent data when the column layout has not changed.
 
-Fixed error: Cannot read property '_freezeHiddenRowCnt' of undefined. 
+Fixed error: Cannot read property '_freezeHiddenRowCnt' of undefined.
 
 Upgraded to use Wijmo build 5.20173.380.
 
